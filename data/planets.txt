@@ -1,0 +1,31 @@
+# data/planets.txt
+# Twelve planets, two per archetype. Eight are drawn per run.
+#
+# NAME|ARCHETYPE|INTRO_FLAVOUR|SITE1;SITE2;SITE3;...
+#
+# ARCHETYPE must be one of: FROZEN, DESERT, VOLCANIC, TOXIC, BARREN, STORM
+# At least three site names, separated by ';'. 
+
+Asteria|FROZEN|You've arrived at Asteria, A planet of deep valleys that you do not want to explore, some people have been said to climb down and to have never come back out. Good luck|North Shelf;Cryo-Vent 4;The Silo;Snowfall;Frostline Ridge;Glacier Cut
+
+Aeron|FROZEN|You've arrived at Aeron, a planet where ice shelves grind against each other, slow and constant. The cold gets into the seals within the hour. You probably don't want to stay here for too long.|Blue Seam;Coldwater Drop;Shear Face;Old Camp;The Cradle
+
+Esus|DESERT|You've arrived at Esus, a planet where the wind and sand alone can make you disappear. Don't walk into a sandstorm alone.|Dune Break;Sink Hollow;Sand Wave;Long Drift;The Scarabs
+
+Mirran|DESERT|You've arrived at Mirran, where you can see the waves of heat and cook your food on the rocks. The survey maps are forty years old but a land of sand will never stay the same.|Salt Flat;Red Cut;Wind Hollow;Buried Rig;Thirst Line
+
+Hellas|VOLCANIC|You've arrived at Hellas, filled with hot rock and ash fall. The ground glows but not by anything magical. You would not want to touch the liquid that comes out of the rocks on this planet.|Caldera Rim;Black Glass;Vent Nine;Ash Terrace;The Bellows
+
+Anubis|VOLCANIC|You've arrived at Anubis, where Lava tubes run for kilometers under the crust, and the good oil sits inside them. Be careful where you drill though.|Twisted Tube;Paper Deep;Ember Fold;Converging Rivers;The Chimney
+
+Vayle|TOXIC|You've arrived at Vayle, Gas veins threaded through the rock like rot through wood and the air eats equipment on a timescale you can watch.|Sulfuric Pools;Corrosion Flats;Green Fume;The Weep;Slurry Pit
+
+Reaper|TOXIC|You've arrived at Reaper, a planet where there is corrosive slurry pools in every low place. Do not sit down and do not take the mask off, whatever the readings say.|Bleachline;Acid Terrace;Mask Point;Hells Plateau;The Blister
+
+Corvane|BARREN|You've arrived at Corvane, it's a vacuum, no weather, and has the remains of something that used to live here. Nobody has established what.|Rib Hollow;Grey Plain;The Widows Shaft;Ossuary;Marker Stone
+
+Shiva|BARREN|You've arrived at Shiva, the only thing left on this planet is the oil, not even air will reside here.|Still Basin;Long Shadow;Dead Seam;The Notch;Empty Quarter
+
+Hades|STORM|You've arrived at Hades, the underworld in space. Its like a game of laser tag where you are constantly dodging lighting.|Static Ridge;Arc Field;The Drum;Iron Mast;Natures Torment
+
+Odin|STORM|You've arrived at Odin, the lightning walks the flats every few seconds, all day, forever. The crew stop flinching by the second hour.|Strike Plain;Conductor Row;Ground Loop;Twister Alley;Blackout Site

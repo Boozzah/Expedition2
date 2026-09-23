@@ -1,0 +1,50 @@
+# data/config.txt
+# The Master Tuning Table, in a file rather than in Java constants -
+# so balancing the game never means recompiling it.
+#
+# Format: KEY=value, one per line. '#' comments and blank lines are ignored.
+# Anything missing or malformed silently falls back to the hardcoded default
+# in GameConfig, so a broken line here can never stop the game starting.
+
+# ---- Fuel economy ----
+STARTING_FUEL=225
+TANK_CAPACITY=350
+JUMP_COST_BASE=100
+JUMP_COST_INCREMENT=25
+
+# ---- Crew: the cost of going down ----
+STAMINA_EXPEDITION_COST=35
+
+# ---- Crew: recovery per planet spent aboard ----
+HEALTH_REST_RECOVERY=10
+STAMINA_REST_RECOVERY=25
+COMPOSURE_REST_RECOVERY=8
+
+# ---- Crew: consequences ----
+COMPOSURE_DEATH_PENALTY=25
+
+# ---------------------------------------------------------------------------
+# NOT YET WIRED UP. These are in GDD but GameConfig doesn't read them yet,
+# so putting them here would do nothing - they'd be silently ignored. Listed so
+# whoever adds them knows the name and value to use.
+#
+#   PLANET_POOL_SIZE            12    (planets.txt currently defines this by
+#                                      how many rows it has)
+#   PLANETS_PER_RUN             8     (GameEngine.ROUTE_LENGTH constant)
+#   HULL_MAX                    100   (hardcoded in Ship)
+#   HULL_FUEL_PENALTY_PER_BAND  8%    (hardcoded in FuelEconomy)
+#   CREW_COUNT                  6     (hardcoded in TextFileDataSource)
+#   EXPEDITION_SLOTS            3     (hardcoded in ExpeditionSelector)
+#   STAMINA_FATIGUE_THRESHOLD   50    (hardcoded in CrewMember)
+#   STAMINA_MIN_ELIGIBLE        25    (hardcoded in CrewMember.isEligible)
+#   HEALTH_MIN_ELIGIBLE         30    (hardcoded in CrewMember.isEligible)
+#   COMPOSURE_MIN_ELIGIBLE      25    (hardcoded in CrewMember.isEligible)
+#   COMPOSURE_SHAKEN_THRESHOLD  40    (not implemented)
+#   ITEM_DROP_BASE              8%    (not implemented)
+#   ITEM_DROP_SURVEYOR_BONUS    7%    (hardcoded in Surveyor)
+#   ASCENT_TRIGGER_BASE         20%   (not implemented)
+#   ASCENT_TRIGGER_PER_EXTRA_TRIP 8%  (not implemented)
+#   JUMP_EVENT_CHANCE           60%   (not implemented)
+#   EMPTY_LEVELS_BEFORE_CLOSE   2     (DrillSession, in progress)
+#   INVENTORY_SLOTS             8     (not implemented)
+#   MINER_OIL_BONUS             8%    (hardcoded in Miner)
