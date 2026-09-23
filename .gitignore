@@ -29,8 +29,9 @@ desktop.ini
 .zshrc
 zsh
 
-# ---- Personal working notes (kept locally, not shared to the repo) ----
-AI-log.md
+# ---- AI usage log ----
+# docs/AI-LOG.md is deliberately TRACKED for Project 2: it is the working draft of
+# Appendix A, and the marking guideline checks it against the AI comments in the code.
 
 # ---- Submission artifacts ----
 *.zip
