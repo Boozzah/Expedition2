@@ -10,6 +10,8 @@ import expedition.engine.GameConfig;
 import expedition.engine.GameEngine;
 import expedition.expedition.ExpeditionSelector;
 import expedition.io.RunLogWriter;
+import expedition.io.db.DatabaseInitialiser;
+import expedition.exception.DatabaseException;
 
 public class Main {
     public static void main(String[] args) {
@@ -25,6 +27,17 @@ public class Main {
         
         // Object to take text files as input
         GameDataSource data = new TextFileDataSource();
+        
+        
+        // Build the database tables if this is the first run. Without them there
+        // is no game to start, so a failure here stops the program.
+        try {
+            new DatabaseInitialiser().initialise();
+        } catch (DatabaseException e) {
+            ui.print("Could not start the game - the database could not be set up:");
+            ui.print(" " + e.getMessage());
+            return;
+        }
         
         // Selctor object for user to choose which crewmembers to take down on the expedition
         ExpeditionSelector selector = new ExpeditionSelector(ui, input, config);
