@@ -330,7 +330,8 @@ Nadia is producing sprites, which runs in parallel with the code and must not bl
 
 ```
 resources/sprites/
-  crew/       braugn.png  mikela.png  vasquez.png  hannah.png  henry.png  <6th>.png
+  crew/       braugn.png  mikela.png  vasquez.png  hannah.png  henry.png  alexander.png
+              (miner)     (doctor)    (pilot)     (surveyor)  (engineer)  (geologist)
   planets/    frozen.png  desert.png  volcanic.png  toxic.png  barren.png  storm.png
   items/      medkit.png  stimulant.png  comfort.png  repairkit.png  fuel.png
   ui/         panel_bg.png  fuel_gauge.png  hull_icon.png
