@@ -1,13 +1,13 @@
 ----------------------------------------------------------------
-Sat Sep 26 18:37:13 NZST 2026:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-01a0-dc6e-a3b0-000017305ef8 
-on database directory /Users/home/NetBeansProjects/Expedition2/data/expedition-db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@7a8c5397 
+Mon Sep 28 12:02:47 NZDT 2026:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-01a0-e51b-4d4f-000017517bf0 
+on database directory /Users/home/NetBeansProjects/Expedition2/data/expedition-db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@6d5380c2 
 Loaded from file:/Users/home/NetBeansProjects/Expedition2/lib/derby.jar
-java.vendor=Oracle Corporation
-java.runtime.version=25.0.3+9-LTS-195
+java.vendor=Eclipse Adoptium
+java.runtime.version=25.0.1+8-LTS
 user.dir=/Users/home/NetBeansProjects/Expedition2
 os.name=Mac OS X
-os.arch=aarch64
+os.arch=x86_64
 os.version=26.6.2
 derby.system.home=null
 Database Class Loader started - derby.database.classpath=''

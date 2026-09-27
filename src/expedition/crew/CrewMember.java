@@ -93,4 +93,8 @@ public abstract class CrewMember {
     public boolean isFatigued() {
         return stamina < FATIGUE_THRESHOLD;
     }
+    
+    // each subclass returns its own role, so the database can save which role 
+    // a crew member is without checking the class with instanceof
+    public abstract Role getRole();
 }

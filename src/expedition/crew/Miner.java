@@ -20,4 +20,9 @@ public class Miner extends CrewMember implements DrillModifier{
         double multiplier = Math.pow(1 + BONUS_PER_LEVEL, depth);
         return (int) Math.round(baseYield * multiplier);
     }
+    
+    @Override
+    public Role getRole() {
+        return Role.MINER;
+    }
 }

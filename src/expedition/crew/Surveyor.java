@@ -26,4 +26,9 @@ public class Surveyor extends CrewMember implements ItemFinder {
         return baseWeight;
     }
     
+    @Override
+    public Role getRole() {
+        return Role.SURVEYOR;
+    }
+    
 }

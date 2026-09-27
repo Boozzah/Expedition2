@@ -32,4 +32,9 @@ public class Pilot extends CrewMember implements AscentModifier{
         }
         return new HazardOutcome(base.severity(), base.text(), filtered);
     }
+    
+    @Override
+    public Role getRole() {
+        return Role.PILOT;
+    }
 }
