@@ -96,7 +96,7 @@ The `SQLException` → `DataLoadException` translation matters: `DataLoadExcepti
 
 Each step is a commit. Each step still runs.
 
-### ☐ Step 1 — the jar on the classpath
+### ☑ Step 1 — the jar on the classpath — **DONE**
 
 - [ ] `mkdir lib && cp ../Lab8-PDC/lib/derby.jar lib/`
 - [ ] NetBeans: right-click project → Properties → Libraries → Add JAR/Folder
@@ -105,7 +105,7 @@ Each step is a commit. Each step still runs.
 
 *Verified already: Derby 10.14.2 embedded works on JDK 25.*
 
-### ☐ Step 2 — `Database`
+### ☑ Step 2 — `Database` (built as `DBManager`) — **DONE**
 
 - [ ] URL constant: `jdbc:derby:data/expedition-db;create=true`
 - [ ] `get()` returns a cached connection, reopening if closed
@@ -113,14 +113,14 @@ Each step is a commit. Each step still runs.
 - [ ] Throwaway `main` that calls `get()` and prints "connected"; confirm `data/expedition-db/` appears
 - [ ] Delete the throwaway before committing
 
-### ☐ Step 3 — `Schema` + `DatabaseInitializer` (tables only, no seeding yet)
+### ☑ Step 3 — `Schema` + `DatabaseInitialiser` (tables only, no seeding yet) — **DONE**
 
 - [ ] DDL for `CREW`, `PLANETS`, `HAZARDS`, `HAZARD_OUTCOMES` (§6)
 - [ ] Create-if-absent — Derby has no `IF NOT EXISTS` (§5)
 - [ ] Call `initialise()` from `Main` before the engine starts
 - [ ] Verify in NetBeans: Services → Databases → the tables exist and are empty
 
-### ☐ Step 4 — `CrewDao` + crew seeding
+### ☐ Step 4 — `CrewDao` + crew seeding — **NEXT**
 
 - [ ] `findAll()` and `insertAll()`
 - [ ] `DatabaseInitializer`: if `SELECT COUNT(*) FROM CREW` is 0, load via `TextFileDataSource.loadCrew()` and insert
@@ -243,3 +243,43 @@ git push
 - [ ] `data/expedition-db/` is gitignored
 - [ ] `lib/derby.jar` is committed and the classpath reference is **relative**
 - [ ] AI-log row added to [AI-LOG.md](AI-LOG.md) for any AI help taken, with matching `// AI assisted …` comments in the code
+
+---
+
+## Where we got to — 28 Sep 2026
+
+**Branch:** `feature/derby-foundation`, pushed to GitHub. Working tree clean.
+**Steps 1–3 of 6 complete.** Next action: Step 4, `CrewDao` + crew seeding.
+
+### Built so far
+
+| File | What it does |
+|---|---|
+| `lib/derby.jar` | Derby 10.14.2, committed, on the compile classpath by **relative** path |
+| `src/expedition/io/db/DBManager.java` | Holds the one connection URL. `get()` caches a connection, `shutdown()` closes Derby down. (Named `DBManager`, not `Database` as this doc originally said — adapted from the PDC lab class.) |
+| `src/expedition/io/db/Schema.java` | The four `CREATE TABLE` statements as constants |
+| `src/expedition/io/db/DatabaseInitialiser.java` | Creates any missing tables at startup. Safe to run every launch |
+| `src/expedition/exception/DatabaseException.java` | New checked exception. `SQLException` is translated here so nothing outside `io.db` imports `java.sql` |
+| `src/expedition/Main.java` | Calls `initialise()` before the engine starts; a failure prints a message and stops |
+
+### Tests passing (3)
+
+- `DBManagerTest.getReturnsTheSameConnectionWhenCalledTwice`
+- `DatabaseInitialiserTest.initialiseCreatesAllFourTables`
+- `DatabaseInitialiserTest.initialiseIsSafeToRunTwice`
+
+### Verified
+
+Deleted `data/expedition-db`, ran the game, quit from the menu — all four tables (`CREW`, `PLANETS`, `HAZARDS`, `HAZARD_OUTCOMES`) created with no configuration. Second run does not fail on existing tables.
+
+### Things decided along the way
+
+- **JUnit 4, not 5.** NetBeans' Ant build only detects `org.junit.Test` / `junit.framework.Test`, so JUnit 5 tests compile but silently never run. Test classpath carries `libs.junit_4` + `libs.hamcrest` + `libs.junit_5`.
+- **`CREW` keys on `NAME`**; `PLANETS` and `HAZARDS` use generated IDs. Still slightly inconsistent — worth settling before the report.
+- **`docs/AI-LOG.md` is untracked and gitignored**, and was scrubbed from git history on 26 Sep. It lives on disk only, so **back it up somewhere outside the repo** — it is 5% of the grade.
+- Deleted the two Project 1 `main()`-based files in `test/` that broke the build. `test/VeinGeneratorCheck/veinGeneratorCheck.java` is still there, fully commented out, awaiting conversion to a real `VeinGeneratorTest`.
+
+### Still to do in Week 10 after this branch
+
+- `GameView` interface extraction — the ~78 UI calls in `GameEngine`, `ExpeditionSelector`, `DrillSession`. **This is the one that cannot slip**; Week 11 is the Swing shell.
+- Sprite manifest agreed with Nadia, placeholder PNGs committed.
