@@ -40,3 +40,4 @@ docs/AI-LOG.md
 *.mkv
 *.mov
 data/expedition-db/
+derby.log
