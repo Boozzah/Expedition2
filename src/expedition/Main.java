@@ -32,8 +32,8 @@ public class Main {
         // Build the database tables if this is the first run. Without them there
         // is no game to start, so a failure here stops the program.
         try {
-            new DatabaseInitialiser().initialise();
-        } catch (DatabaseException e) {
+            new DatabaseInitialiser(data).initialise();
+        } catch (DatabaseException | DataLoadException e) {
             ui.print("Could not start the game - the database could not be set up:");
             ui.print(" " + e.getMessage());
             return;

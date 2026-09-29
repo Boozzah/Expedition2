@@ -12,18 +12,42 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import expedition.exception.DatabaseException;
+import expedition.io.GameDataSource;
+import expedition.exception.DataLoadException;
 
 public class DatabaseInitialiser {
     
+    // where the starting content comes from when a table is empty
+    private final GameDataSource seedSource;
+    
+    public DatabaseInitialiser(GameDataSource seedSource) {
+        this.seedSource = seedSource;
+    }
+    
     // The order matters. HAZARD_OUTCOMES has a FK from the hazard table
-    public void initialise() throws DatabaseException {
+    public void initialise() throws DatabaseException, DataLoadException {
         try {
             createIfAbsent("CREW", Schema.CREW);
             createIfAbsent("PLANETS", Schema.PLANETS);
             createIfAbsent("HAZARDS", Schema.HAZARDS);
             createIfAbsent("HAZARD_OUTCOMES", Schema.HAZARD_OUTCOMES);
+            
+            
+            // first run only - once the crew are in, the table is never emptied
+            if (isEmpty("CREW")) {
+                new CrewDao().insertAll(seedSource.loadCrew());
+            }
         } catch (SQLException e) {
             throw new DatabaseException("Could not create the game table", e);
+        }
+    }
+    
+    // COUNT(*) always returns one row holding the number of rows in the table
+    private boolean isEmpty(String tableName) throws SQLException {
+        try (Statement st = DBManager.get().createStatement();
+                ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
+            rs.next();
+            return rs.getInt(1) == 0;
         }
     }
     

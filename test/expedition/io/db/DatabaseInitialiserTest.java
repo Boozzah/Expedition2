@@ -13,13 +13,15 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import expedition.io.TextFileDataSource;
+import expedition.exception.DataLoadException;
 
 public class DatabaseInitialiserTest {
     
     @Test
-    public void initialiseCreatesAllFourTables() throws DatabaseException, SQLException {
+    public void initialiseCreatesAllFourTables() throws DatabaseException, DataLoadException, SQLException {
         
-        new DatabaseInitialiser().initialise();
+        new DatabaseInitialiser(new TextFileDataSource()).initialise();
         
         assertTrue("CREW table should exist", tableExists("CREW"));
         assertTrue("PLANETS table should exist", tableExists("PLANETS"));
@@ -32,8 +34,8 @@ public class DatabaseInitialiserTest {
     //  this is the case that matters, if every launch after the first one runs
     // against a database where the tables are already there.
     @Test
-    public void initialiseIsSafeToRunTwice() throws DatabaseException {
-        DatabaseInitialiser init = new DatabaseInitialiser();
+    public void initialiseIsSafeToRunTwice() throws DatabaseException, DataLoadException {
+        DatabaseInitialiser init = new DatabaseInitialiser(new TextFileDataSource());
         init.initialise();
         init.initialise();   // must not throw "table already exists"
     }
