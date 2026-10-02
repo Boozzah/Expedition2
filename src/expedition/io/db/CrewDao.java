@@ -13,6 +13,9 @@ import expedition.exception.DatabaseException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+// prepared statement lets you write the SWL once with ? gaps and fill in the values seperately.
+// CLAUDE RECCOMENDED WHEN I ASKED HOW TO HANDLE APOSTROPHES
+import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,21 +25,25 @@ class CrewDao {
     // ORDER BY so the crew comes back in the same order
     private static final String SELECT_ALL = "SELECT NAME, ROLE, HEALTH, STAMINA, COMPOSURE FROM CREW ORDER BY NAME";
     
+    // each ? is filled in later with setString/setInt, in column order
+    private static final String INSERT = "INSERT INTO CREW VALUES (?, ?, ?, ?, ?)";
     
-    // each crew member is one insert statement. The names come from crew.txt
-    // so they can be put straight into SQL text
+    // the ? placeholders let the deriver handle the quoting, so text with an apostrophe
+    // in it (like planet flavour text) can't break the SQL query or statement
     void insertAll(List<CrewMember> crew) throws DatabaseException {
-        try (Statement st = DBManager.get().createStatement()) {
+        try (PreparedStatement ps = DBManager.get().prepareStatement(INSERT)) {
             for (CrewMember c : crew) {
-                st.executeUpdate("INSERT INTO CREW VALUES ('"
-                        + c.getName() + "', '"
-                        + c.getRole().name() + "', "
-                        + c.getHealth() + ", "
-                        + c.getStamina() + ", "
-                        + c.getComposure() + ")");
+                ps.setString(1, c.getName());
+                ps.setString(2, c.getRole().name());
+                ps.setInt(3, c.getHealth());
+                ps.setInt(4, c.getStamina());
+                ps.setInt(5, c.getComposure());
+                ps.addBatch();
             }
+            // sends every row to the database in one go
+            ps.executeBatch();
         } catch (SQLException e) {
-            throw new DatabaseException("Could not save the crew", e);
+            throw new DatabaseException("Vould not save the crew", e);
         }
     }
     
