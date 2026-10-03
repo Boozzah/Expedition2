@@ -13,6 +13,9 @@ import expedition.io.RunLogWriter;
 import expedition.io.db.DatabaseInitialiser;
 import expedition.exception.DatabaseException;
 
+import expedition.io.db.DerbyDataSource;
+import expedition.io.db.DBManager;
+
 public class Main {
     public static void main(String[] args) {
         
@@ -25,14 +28,15 @@ public class Main {
         // Game configuration 
         GameConfig config = GameConfig.load();
         
-        // Object to take text files as input
-        GameDataSource data = new TextFileDataSource();
+        // Game content comes from the database. GameEngine only sees GameDataSource,
+        // so it doesn't know or care that this used to be the text files
+        GameDataSource data = new DerbyDataSource();
         
         
         // Build the database tables if this is the first run. Without them there
         // is no game to start, so a failure here stops the program.
         try {
-            new DatabaseInitialiser(data).initialise();
+            new DatabaseInitialiser(new TextFileDataSource()).initialise();
         } catch (DatabaseException | DataLoadException e) {
             ui.print("Could not start the game - the database could not be set up:");
             ui.print(" " + e.getMessage());
@@ -57,11 +61,13 @@ public class Main {
         } catch (QuitGameException e) {
             // player typed Q. a deliberate action - exception handles the rest
         } catch (DataLoadException e) {
-            // if there is an error loading game data from text file
+            // if there is an error loading game data from database
             ui.print("Could not start the game - a data file could not be read: ");
             ui.print(" " + e.getMessage());
             ui.print("Fix the file and try again.");
         }
+        // closes the database cleanly so Derby doesn't have to recover it on the next launch
+        DBManager.shutdown();
         ui.print("Goodbye.");
     }
     

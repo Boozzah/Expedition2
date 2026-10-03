@@ -20,6 +20,15 @@ public class DataLoadException extends Exception {
         this.lineNumber = lineNumber;
     }
     
+    // for content that came from the database rather than a file, there is no line number,
+    // so the source is the table name and the original error is kept as the cause
+    public DataLoadException(String source, String reason, Throwable cause) {
+        super(source + ": " + reason, cause);
+        
+        this.fileName = source;
+        this.lineNumber = 0;
+    }
+    
     public String getFileName() {
         return fileName;
     }
