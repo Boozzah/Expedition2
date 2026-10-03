@@ -120,22 +120,22 @@ Each step is a commit. Each step still runs.
 - [ ] Call `initialise()` from `Main` before the engine starts
 - [ ] Verify in NetBeans: Services → Databases → the tables exist and are empty
 
-### ☐ Step 4 — `CrewDao` + crew seeding — **NEXT**
+### ☑ Step 4 — `CrewDao` + crew seeding — **DONE**
 
-- [ ] `findAll()` and `insertAll()`
-- [ ] `DatabaseInitializer`: if `SELECT COUNT(*) FROM CREW` is 0, load via `TextFileDataSource.loadCrew()` and insert
-- [ ] Prove the round-trip on the smallest table — 6 rows
+- [x] `findAll()` and `insertAll()`
+- [x] `DatabaseInitialiser`: if `SELECT COUNT(*) FROM CREW` is 0, load via `TextFileDataSource.loadCrew()` and insert
+- [x] Prove the round-trip on the smallest table — 6 rows (`CrewDaoTest`)
 
-### ☐ Step 5 — `PlanetDao` + `HazardDao` + their seeding
+### ☑ Step 5 — `PlanetDao` + `HazardDao` + their seeding — **DONE**
 
-- [ ] Planets: watch the `;`-separated site-name list (flatten to a child table, or keep the delimited string — your call, note which you picked)
-- [ ] Hazards last: two tables and 1,100-character text, so it's the fiddly one
+- [x] Planets: **kept the delimited string.** `SITES` holds `North Shelf;The Silo;…`, joined on insert and split on read
+- [x] Hazards: one `HAZARDS` row + six `HAZARD_OUTCOMES` rows each, linked by `getGeneratedKeys()`
 
-### ☐ Step 6 — `DerbyDataSource` + the swap
+### ☑ Step 6 — `DerbyDataSource` + the swap — **DONE**
 
-- [ ] Implement the three `GameDataSource` methods over the DAOs
-- [ ] `Main.java`: `new TextFileDataSource()` → `new DerbyDataSource()` — one line
-- [ ] **Run the gate.** `rm -rf data/expedition-db`, launch, play
+- [x] Implement the three `GameDataSource` methods over the DAOs
+- [x] `Main.java`: `new TextFileDataSource()` → `new DerbyDataSource()` — one line
+- [x] **Run the gate.** `rm -rf data/expedition-db`, launch, play — passed 3 Oct
 
 That one-line swap is the cleanest demo of why `GameDataSource` was built as an interface. Worth saying out loud in the video.
 
@@ -237,47 +237,73 @@ git push
 
 ## 9. Before you merge
 
-- [ ] Gate passes from a deleted database
-- [ ] No `java.sql` import outside `io.db`
-- [ ] Connection URL appears exactly once in the codebase
-- [ ] `data/expedition-db/` is gitignored
-- [ ] `lib/derby.jar` is committed and the classpath reference is **relative**
-- [ ] AI-log row added to [AI-LOG.md](AI-LOG.md) for any AI help taken, with matching `// AI assisted …` comments in the code
+- [x] Gate passes from a deleted database
+- [x] No `java.sql` import outside `io.db`
+- [x] Connection URL appears exactly once in the codebase (`DBManager.java:18`)
+- [x] `data/expedition-db/` is gitignored
+- [x] `lib/derby.jar` is committed and the classpath reference is **relative**
+- [ ] AI-log row added to [AI-LOG.md](AI-LOG.md) for any AI help taken, with matching `// AI assisted …` comments in the code — **log rows added 3 Oct; some code comments still missing, see AI-LOG**
 
 ---
 
-## Where we got to — 28 Sep 2026
+## Where we got to — 3 Oct 2026
 
-**Branch:** `feature/derby-foundation`, pushed to GitHub. Working tree clean.
-**Steps 1–3 of 6 complete.** Next action: Step 4, `CrewDao` + crew seeding.
+**Branch:** `feature/derby-foundation`. **All 6 steps complete and the gate passes.** Next action: merge into `main` with `--no-ff` (§8).
 
-### Built so far
+The game now reads crew, planets and hazards from Derby. On first launch the database creates itself and seeds from `data/*.txt`; every launch after that reads straight from the tables.
+
+### Built on this branch
 
 | File | What it does |
 |---|---|
 | `lib/derby.jar` | Derby 10.14.2, committed, on the compile classpath by **relative** path |
 | `src/expedition/io/db/DBManager.java` | Holds the one connection URL. `get()` caches a connection, `shutdown()` closes Derby down. (Named `DBManager`, not `Database` as this doc originally said — adapted from the PDC lab class.) |
 | `src/expedition/io/db/Schema.java` | The four `CREATE TABLE` statements as constants |
-| `src/expedition/io/db/DatabaseInitialiser.java` | Creates any missing tables at startup. Safe to run every launch |
-| `src/expedition/exception/DatabaseException.java` | New checked exception. `SQLException` is translated here so nothing outside `io.db` imports `java.sql` |
-| `src/expedition/Main.java` | Calls `initialise()` before the engine starts; a failure prints a message and stops |
+| `src/expedition/io/db/DatabaseInitialiser.java` | Creates any missing tables at startup, then seeds each empty table from the `GameDataSource` it is given. Safe to run every launch |
+| `src/expedition/io/db/CrewDao.java` | `CREW` table. `PreparedStatement` + batch insert; `findAll()` rebuilds subclasses through `CrewFactory` |
+| `src/expedition/io/db/PlanetDao.java` | `PLANETS` table. Site names joined with `;` into one column and split back out |
+| `src/expedition/io/db/HazardDao.java` | `HAZARDS` + `HAZARD_OUTCOMES`. Inserts each hazard, reads its ID back with `getGeneratedKeys()`, then batches its six outcomes. Reads both tables with one `JOIN` |
+| `src/expedition/io/db/DerbyDataSource.java` | `implements GameDataSource` over the three DAOs. Turns `DatabaseException` into `DataLoadException` so `GameEngine` is unchanged |
+| `src/expedition/exception/DatabaseException.java` | Checked exception. `SQLException` is translated here so nothing outside `io.db` imports `java.sql` |
+| `src/expedition/exception/DataLoadException.java` | Gained a `(source, reason, cause)` constructor for errors that come from a table rather than a file line |
+| `src/expedition/hazard/HazardOutcome.java` | Gained an `effectCodes` field — the raw effect string, kept only so it can be saved and re-parsed |
+| `src/expedition/world/Planet.java` | Gained a `siteNamePool()` getter so `PlanetDao` can save the site names |
+| `src/expedition/Main.java` | Seeds via `new DatabaseInitialiser(new TextFileDataSource())`, plays from `new DerbyDataSource()`, calls `DBManager.shutdown()` on exit |
 
-### Tests passing (3)
+### Tests passing (6)
 
 - `DBManagerTest.getReturnsTheSameConnectionWhenCalledTwice`
 - `DatabaseInitialiserTest.initialiseCreatesAllFourTables`
 - `DatabaseInitialiserTest.initialiseIsSafeToRunTwice`
+- `CrewDaoTest.findAllReturnsTheSameCrewAsTheTextFile`
+- `PlanetDaoTest.findAllReturnsTheSamePlanetsAsTheTextFile`
+- `HazardDaoTest.findAllReturnsTheSameHazardsAsTheTextFile`
+
+The three DAO tests never insert test rows — they run the initialiser and compare the database against the text files, so no fake data ends up in the real game database.
 
 ### Verified
 
-Deleted `data/expedition-db`, ran the game, quit from the menu — all four tables (`CREW`, `PLANETS`, `HAZARDS`, `HAZARD_OUTCOMES`) created with no configuration. Second run does not fail on existing tables.
+- **The gate:** deleted `data/expedition-db`, launched, played an expedition. Database created and seeded itself; game plays as before.
+- Second launch starts without reseeding.
+- Row counts after seeding: `CREW` 6, `PLANETS` 12, `HAZARDS` 11, `HAZARD_OUTCOMES` 66.
+- `db.lck` is gone after quitting from the menu, so the clean shutdown works.
 
 ### Things decided along the way
 
-- **JUnit 4, not 5.** NetBeans' Ant build only detects `org.junit.Test` / `junit.framework.Test`, so JUnit 5 tests compile but silently never run. Test classpath carries `libs.junit_4` + `libs.hamcrest` + `libs.junit_5`.
-- **`CREW` keys on `NAME`**; `PLANETS` and `HAZARDS` use generated IDs. Still slightly inconsistent — worth settling before the report.
+- **Every insert uses `PreparedStatement`.** `planets.txt` has 13 apostrophes and `hazards.txt` has 3; string-built SQL would have broken on the first one. Plain `Statement` is only used where the SQL is fixed (`SELECT_ALL`, `CREATE TABLE`).
+- **`SITES` stays a delimited string**, not a child table. The game never queries individual site names, so a second table would add a join for nothing.
+- **`HazardOutcome` keeps its raw `effectCodes`.** The alternative was a `toCode()` on every `Effect` class to rebuild the string. `Pilot.modifyAscent` passes the original codes through unchanged; harmless, because only saving reads them and that copy is never saved.
+- **Crew come back alphabetically** (`ORDER BY NAME`), not in `crew.txt` order. This is the one visible difference from the text-file version. **Kept deliberately.** Planets and hazards use `ORDER BY ID`, so they keep file order — the seeded-run replay depends on that.
+- **`CREW` keys on `NAME`**; `PLANETS` and `HAZARDS` use generated IDs. Still slightly inconsistent — worth a sentence in the report.
+- **The text files are the seed, Derby is the source.** `Main` has two data sources: `TextFileDataSource` only feeds the initialiser, `DerbyDataSource` feeds the game. Passing the Derby one to the initialiser by mistake seeds empty tables, and the run ends instantly with "There is noone left" — hit this once during the gate.
+- **NetBeans' bundled "Java DB (Embedded)" driver can't open this database.** Services → Databases needs a driver pointed at `lib/derby.jar`, and must be **disconnected** before running the game or tests (embedded Derby allows one JVM at a time).
+- **JUnit 4, not 5.** NetBeans' Ant build only detects `org.junit.Test` / `junit.framework.Test`, so JUnit 5 tests compile but silently never run. GDD §7 still says JUnit 5 — fix it and tell Nadia.
 - **`docs/AI-LOG.md` is untracked and gitignored**, and was scrubbed from git history on 26 Sep. It lives on disk only, so **back it up somewhere outside the repo** — it is 5% of the grade.
-- Deleted the two Project 1 `main()`-based files in `test/` that broke the build. `test/VeinGeneratorCheck/veinGeneratorCheck.java` is still there, fully commented out, awaiting conversion to a real `VeinGeneratorTest`.
+- `test/VeinGeneratorCheck/veinGeneratorCheck.java` is still there, fully commented out, awaiting conversion to a real `VeinGeneratorTest`.
+
+### Worth adding later
+
+- `DerbyDataSourceTest` — delete the database, initialise, assert `loadCrew()` is not empty. None of the current tests would have caught the wrong-seed-source bug above.
 
 ### Still to do in Week 10 after this branch
 
