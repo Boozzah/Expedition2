@@ -39,4 +39,9 @@ public class Doctor extends CrewMember implements FieldMedic {
         target.gainHealth(HEAL_AMOUNT);
         used = true;
     }
+    
+    @Override
+    public Role getRole() {
+        return Role.DOCTOR;
+    }
 }

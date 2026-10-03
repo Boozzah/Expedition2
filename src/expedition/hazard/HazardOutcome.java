@@ -14,8 +14,9 @@ import expedition.hazard.effect.EffectContext;
  * for the rest of the run. Very hard bug to find.
  */
 
-public record HazardOutcome(int severity, String text, List<Effect> effects) 
+public record HazardOutcome(int severity, String text, List<Effect> effects, String effectCodes) 
 {
+    
     public void applyAll(EffectContext ctx)
     {
         for (Effect e : effects)

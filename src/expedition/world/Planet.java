@@ -108,4 +108,9 @@ public class Planet
     public PlanetArchetype archetype() {
         return archetype;
     }
+    
+    // PlanetDao needs to read the site names to save them, so Planet needs a getter
+    public List<String> siteNamePool() {
+        return siteNamePool;
+    }
 }

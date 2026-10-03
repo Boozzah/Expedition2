@@ -24,4 +24,9 @@ public class Geologist extends CrewMember implements VeinInsight {
         // auto ejects at the bottom - 0 levels left so leave automatically
         return levelsLeft <= 0;
     }
+    
+    @Override
+    public Role getRole() {
+        return Role.GEOLOGIST;
+    }
 }

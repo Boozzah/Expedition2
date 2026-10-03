@@ -30,11 +30,14 @@ desktop.ini
 zsh
 
 # ---- AI usage log ----
-# docs/AI-LOG.md is deliberately TRACKED for Project 2: it is the working draft of
-# Appendix A, and the marking guideline checks it against the AI comments in the code.
+# Working draft of Appendix A. Kept locally, not shared to the repo - it goes into
+# the submission report at the end, not into version control.
+docs/AI-LOG.md
 
 # ---- Submission artifacts ----
 *.zip
 *.mp4
 *.mkv
 *.mov
+data/expedition-db/
+derby.log

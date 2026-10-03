@@ -7,14 +7,8 @@
  */
 package expedition.io;
 
-import expedition.crew.CrewMember;                                                    
-import expedition.crew.Doctor;
-import expedition.crew.Engineer;
-import expedition.crew.Geologist;
-import expedition.crew.Miner;
-import expedition.crew.Pilot;                                                         
+import expedition.crew.CrewMember;                                                                                                           
 import expedition.crew.Role;
-import expedition.crew.Surveyor;
 import expedition.exception.DataLoadException;
 import expedition.world.Planet;
 import expedition.world.PlanetArchetype;
@@ -23,6 +17,7 @@ import expedition.hazard.HazardOutcome;
 import expedition.hazard.HazardSet;
 import expedition.hazard.effect.Effect;
 import expedition.hazard.effect.EffectParser;
+import expedition.crew.CrewFactory;
 
 import java.io.BufferedReader;                                                        
 import java.io.FileReader;
@@ -119,7 +114,7 @@ public class TextFileDataSource implements GameDataSource {
             int stamina = number(row.fields()[3], CREW_FILE, row.lineNumber());
             int composure = number(row.fields()[4], CREW_FILE, row.lineNumber());
 
-            crew.add(createCrew(role, name, health, stamina, composure));
+            crew.add(CrewFactory.create(role, name, health, stamina, composure));
             
         }
         
@@ -209,7 +204,7 @@ public class TextFileDataSource implements GameDataSource {
             // it replaces a get, a null check, and another get. The new entry takes its set from whichever row was first
             byName.computeIfAbsent(name, k -> new HazardRows(set, new LinkedHashMap<>()))
                     .outcomes()
-                    .put(severity, new HazardOutcome(severity, text, effects));
+                    .put(severity, new HazardOutcome(severity, text, effects, row.fields()[4].trim()));
         }
         
         // --- loop 2: check each hazard is complete then build the objects -----
@@ -231,23 +226,6 @@ public class TextFileDataSource implements GameDataSource {
     
     // Helper methods
     // each converts an unchecked exception into checked, so typos result in a file error rather than crash
-    
-    // turns the role read from the file from a string to the matching subclass.
-    // this is the one place in the program that knows MINER means the Miner class
-    // everywhere else just holds a CrewMember and lets the subclass decide what its ability does
-    
-    // A switch expression returns a value rather than a statement
-    private CrewMember createCrew(Role role, String name, int health, int stamina, int composure)
-    {
-        return switch(role) {
-            case MINER -> new Miner(name, health, stamina, composure);
-            case DOCTOR -> new Doctor(name, health, stamina, composure);
-            case PILOT -> new Pilot(name, health, stamina, composure);
-            case SURVEYOR -> new Surveyor(name, health, stamina, composure);
-            case ENGINEER -> new Engineer(name, health, stamina, composure);
-            case GEOLOGIST -> new Geologist(name, health, stamina, composure);
-        };
-    }
     
     // valueOf is an enum lookup
     // toUpperCase() means lowercase works too
