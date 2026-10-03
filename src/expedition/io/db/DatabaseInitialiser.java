@@ -41,6 +41,14 @@ public class DatabaseInitialiser {
             if (isEmpty("PLANETS")) {
                 new PlanetDao().insertAll(seedSource.loadPlanets());
             }
+            if (isEmpty("PLANETS")) {
+                new PlanetDao().insertAll(seedSource.loadPlanets());
+            }
+
+            if (isEmpty("HAZARDS")) {
+                new HazardDao().insertAll(seedSource.loadHazards());
+            }
+            
         } catch (SQLException e) {
             throw new DatabaseException("Could not create the game table", e);
         }

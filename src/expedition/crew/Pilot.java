@@ -30,7 +30,7 @@ public class Pilot extends CrewMember implements AscentModifier{
                 filtered.add(effect);
             }
         }
-        return new HazardOutcome(base.severity(), base.text(), filtered);
+        return new HazardOutcome(base.severity(), base.text(), filtered, base.effectCodes());
     }
     
     @Override

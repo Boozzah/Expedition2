@@ -204,7 +204,7 @@ public class TextFileDataSource implements GameDataSource {
             // it replaces a get, a null check, and another get. The new entry takes its set from whichever row was first
             byName.computeIfAbsent(name, k -> new HazardRows(set, new LinkedHashMap<>()))
                     .outcomes()
-                    .put(severity, new HazardOutcome(severity, text, effects));
+                    .put(severity, new HazardOutcome(severity, text, effects, row.fields()[4].trim()));
         }
         
         // --- loop 2: check each hazard is complete then build the objects -----
