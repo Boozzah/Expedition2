@@ -13,8 +13,8 @@ import java.util.List;
  * - typing "Q" at ANY prompt throws QuitGameException, which unwinds
  *   straight up through the call stack to Main (caught there, program
  *   exits cleanly) without needing to be handled at every level in between.
- * - typing "B" (readInt only, for now) returns the BACK sentinal instead of
- *   a real value, so the caller knows to treat it as "go back a step or menue level"
+ * - typing "B" (readInt only, for now) returns GameView.BACK instead of
+ *   a real value, so the caller knows to treat it as "go back a step or menu level"
  *   rather than a valid answer
  * 
  * None of these methods ever let a raw exception (like NumberFormatException)
@@ -23,9 +23,6 @@ import java.util.List;
  */
 
 public class InputValidator {
-    
-    // Typing "B" returns GameView.BACK so the caller knows to treat it as "go back a step or menu level"
-    public static final int BACK = GameView.BACK;
     
     private final ConsoleUI ui;
     
@@ -39,7 +36,7 @@ public class InputValidator {
         while (true) {
             String line = ui.input(prompt);
             if (line.equalsIgnoreCase("Q")) throw new QuitGameException();  // quit game
-            if (line.equalsIgnoreCase("B")) return BACK;
+            if (line.equalsIgnoreCase("B")) return GameView.BACK;
             
             int parsed;
             try {
