@@ -24,10 +24,8 @@ import java.util.List;
 
 public class InputValidator {
     
-    // Sentinel value returned by readInt when the player types "B" (back).
-    // Integer.MIN_VALUE is used because it's a value no real game input
-    // would ever legitimately be.
-    public static final int BACK = Integer.MIN_VALUE;
+    // Typing "B" returns GameView.BACK so the caller knows to treat it as "go back a step or menu level"
+    public static final int BACK = GameView.BACK;
     
     private final ConsoleUI ui;
     
