@@ -11,8 +11,7 @@ import expedition.crew.CrewMember;
 import expedition.exception.QuitGameException;
 import expedition.ship.FuelEconomy;
 import expedition.ship.Ship;
-import expedition.ui.ConsoleUI;
-import expedition.ui.InputValidator;
+import expedition.ui.GameView;
 import expedition.world.Planet;
 import expedition.io.GameDataSource;
 import expedition.exception.DataLoadException;
@@ -33,8 +32,7 @@ public class GameEngine {
     // 8 planets in a run
     private static final int ROUTE_LENGTH = 8;
     
-    private final ConsoleUI ui;
-    private final InputValidator input;
+    private final GameView view;
     private final GameConfig config;
     private final GameDataSource data;
     private final ExpeditionSelector selector;
@@ -42,11 +40,10 @@ public class GameEngine {
     private List<Hazard> allHazards = List.of();
     private final Long fixedSeed;
     
-    public GameEngine(ConsoleUI ui, InputValidator input, GameConfig config, 
+    public GameEngine(GameView view, GameConfig config, 
                       GameDataSource data, ExpeditionSelector selector, 
                       RunLogWriter log, Long fixedSeed) {
-        this.ui = ui;
-        this.input = input;
+        this.view = view;
         this.config = config;
         this.data = data;
         this.selector = selector;
@@ -61,7 +58,7 @@ public class GameEngine {
     public void run() throws QuitGameException, DataLoadException {
         boolean playing = true;
         while(playing) {
-            String choice = input.readChoice("--- MAIN MENU ---", List.of("New Game (n)", "How to Play (h)", "Quit (q)"));
+            String choice = view.readChoice("--- MAIN MENU ---", List.of("New Game (n)", "How to Play (h)", "Quit (q)"));
             switch(choice) {
                 case "New Game (n)": playRun(startNewRun()); break;
                 case "How to Play (h)": showInstructions(); break; 
@@ -113,13 +110,13 @@ public class GameEngine {
             
             // cant afford jump cost
             if (!state.ship().canAfford(jumpCost)) {
-                ui.print("The ship doesn't have enough fuel for the next jump. You require: " + jumpCost + " fuel");
+                view.print("The ship doesn't have enough fuel for the next jump. You require: " + jumpCost + " fuel");
                 state.endRun(EndingReason.ADRIFT);
                 break;
             }
             // Only one real option exists at this stage
-            ui.print(""); 
-            input.readChoice("Jump " + state.jumpNumber() + " costs " + jumpCost + " fuel. Ready to jump? Type: ", List.of("Jump"));
+            view.print(""); 
+            view.readChoice("Jump " + state.jumpNumber() + " costs " + jumpCost + " fuel. Ready to jump? Type: ", List.of("Jump"));
             
             // spend fuel
             state.ship().spendFuel(jumpCost);
@@ -138,22 +135,22 @@ public class GameEngine {
     
     private void showInstructions()
     {
-        ui.print("");
-        ui.print("=== EXPEDITION ==="); 
-        ui.print("After an expedition you ascend to the mothership, but they arent there...");
-        ui.print("You check the location tracker of the ship and see that they have left beacons planets away.");
-        ui.print(TextWrapper.wrap("Theres only so much fuel this ship can hold so you know you will have to make some more stops along the way before you get home.", 100));
-        ui.print("");
-        ui.print(TextWrapper.wrap("Your mission is to collect enough fuel to get home, you must jump to a planet and decide if you want to drill. Just know that drilling can be risky.", 100));
-        ui.print(TextWrapper.wrap("Hazards can cost you fuel, or even your crews life. Every jump costs more than the last so manage your fuel wisely. Good luck on your mission.", 100));
-        ui.print("");
+        view.print("");
+        view.print("=== EXPEDITION ==="); 
+        view.print("After an expedition you ascend to the mothership, but they arent there...");
+        view.print("You check the location tracker of the ship and see that they have left beacons planets away.");
+        view.print(TextWrapper.wrap("Theres only so much fuel this ship can hold so you know you will have to make some more stops along the way before you get home.", 100));
+        view.print("");
+        view.print(TextWrapper.wrap("Your mission is to collect enough fuel to get home, you must jump to a planet and decide if you want to drill. Just know that drilling can be risky.", 100));
+        view.print(TextWrapper.wrap("Hazards can cost you fuel, or even your crews life. Every jump costs more than the last so manage your fuel wisely. Good luck on your mission.", 100));
+        view.print("");
     }
     
     private Expedition visitPlanet(RunState state, Planet planet) {
         // flavour formatting
-        ui.print("");
-        ui.print("=== " + planet.name() + " (" + planet.archetype() + ") ===");
-        ui.print(TextWrapper.wrap(planet.introFlavour(), 100));
+        view.print("");
+        view.print("=== " + planet.name() + " (" + planet.archetype() + ") ===");
+        view.print(TextWrapper.wrap(planet.introFlavour(), 100));
         
         // write to run log
         log.log("=== " + planet.name() + " (" + planet.archetype() + ") ===");
@@ -163,8 +160,8 @@ public class GameEngine {
         planet.generateSites(state.rng(), config);
         
         // skipping is a real strategic option - banking fuel instead of drilling
-        if (!input.readYesNo("Send an expedition down?")) {
-            ui.print("You stay aboard and conserve fuel.");
+        if (!view.readYesNo("Send an expedition down?")) {
+            view.print("You stay aboard and conserve fuel.");
             return null;
         }
         // select crew members for expedition
@@ -185,28 +182,28 @@ public class GameEngine {
             List<DrillSite> sites = planet.openSites();
             
             if (sites.isEmpty()) {
-                ui.print("Every site here is drilled out.");
+                view.print("Every site here is drilled out.");
                 break;
             }
             
             // flavour text
-            ui.print("");
-            ui.print("--- Drill sites ---");
+            view.print("");
+            view.print("--- Drill sites ---");
             for(int i = 0; i < sites.size(); i++) {
                 DrillSite s = sites.get(i);
                 // randomise hazard chance for each site option
                 int riskStart = (int) Math.round(s.tier().hazardChance(1) * 100);
                 int riskDeep = (int) Math.round(s.tier().hazardChance(s.tier().getMaxDepth()) * 100);
                 
-                ui.print("  " + (i + 1) + ". " + s.name()
+                view.print("  " + (i + 1) + ". " + s.name()
                           + "  [" + s.tier() + "]"
                           + "  est. " + s.estimatedOil()
                           + "  hazard " + riskStart + "% rising to " + riskDeep + "%");
             }
             
-            int pick = input.readInt("Choose a site: ", 1, sites.size());
-            if (pick == InputValidator.BACK) {
-                ui.print("The team stands down.");
+            int pick = view.readInt("Choose a site: ", 1, sites.size());
+            if (pick == GameView.BACK) {
+                view.print("The team stands down.");
                 break;
             }
             DrillSite site = sites.get(pick - 1);
@@ -222,15 +219,15 @@ public class GameEngine {
                 }
             }
             
-            int haul = new DrillSession(site, team, state, ui, input, config, applicable).run();
+            int haul = new DrillSession(site, team, state, view, config, applicable).run();
             
             // The oil is the fuel. addOil banks it toward the run total and
             // pours it into the tank, returning how much actually fitted
             int stored = state.addOil(haul);
-            ui.print("");
-            ui.print("Hauled " + haul + " oil.");
+            view.print("");
+            view.print("Hauled " + haul + " oil.");
             if (stored < haul) {
-                ui.print("The tank is full. " + (haul - stored) + " oil left behind.");
+                view.print("The tank is full. " + (haul - stored) + " oil left behind.");
             }
             
             // a hazard could have killed the last of the crew
@@ -238,7 +235,7 @@ public class GameEngine {
                 break;
             }
             
-            if (!input.readYesNo("Move the team to another site?")) {
+            if (!view.readYesNo("Move the team to another site?")) {
                 break;
             }
         }
@@ -247,9 +244,9 @@ public class GameEngine {
     
     // hull percent does not mean anything at this stage, will be more useful in project 2
     private void reportStatus(RunState state) {
-        ui.print(""); 
-        ui.print("=== Jump " + state.jumpNumber() + " ===");
-        ui.print("Fuel: " + state.ship().fuel() + " Hull: " + state.ship().hullPercent() + "%");
+        view.print(""); 
+        view.print("=== Jump " + state.jumpNumber() + " ===");
+        view.print("Fuel: " + state.ship().fuel() + " Hull: " + state.ship().hullPercent() + "%");
     }
     
     private void reportEnding(RunState state) {
@@ -259,40 +256,40 @@ public class GameEngine {
         // ending texts
         switch (ending.reason()) {
             case HOME: 
-                ui.print(TextWrapper.wrap("You see the mothership, its lights through the windows, and you are so excited to be back in the warmth of your home. You dock the ship, and your "
+                view.print(TextWrapper.wrap("You see the mothership, its lights through the windows, and you are so excited to be back in the warmth of your home. You dock the ship, and your "
                         + "family is already waiting for you. Tears are streaming down everyones faces. You watch your other crewmates get the same welcoming. You will not "
                         + "be going for another expedition for a while. There will be a celebration tonight but all you care about is that you are home, you are with your "
                         + "family again and you are safe... CONGRATULATIONS YOU HAVE WON THE GAME", 100)); 
                 break;
             case ADRIFT: 
-                ui.print(TextWrapper.wrap("You search for anywhere fuel could be hidden, maybe you could make fuel out of your food. You try blending your food and putting it into the engine "
+                view.print(TextWrapper.wrap("You search for anywhere fuel could be hidden, maybe you could make fuel out of your food. You try blending your food and putting it into the engine "
                         + "but all that did was waste what you had left. There is no hope. You will never see your family again, never see your home, your friends, or eat your "
                         + "favourite food. You try to break open the window. But all that leaves you with is broken tools, so you sit there hopeless with only one path you "
                         + "can take... GAME OVER, TRY AGAIN", 100)); 
                 break;
             case HULL_FAILURE:
-                ui.print(TextWrapper.wrap("The ships lights slowly turn off, the alarms sound and you realize that the only piece of home you have left is gone. The only small piece of saftey "
+                view.print(TextWrapper.wrap("The ships lights slowly turn off, the alarms sound and you realize that the only piece of home you have left is gone. The only small piece of saftey "
                         + "is breaking apart. You grab the only photo you have of your family, get into bed and try to dream that you made it home. That they welcomed you "
                         + "back. Having missed you for so long. And then you hear the oxygen waring... GAME OVER, TRY AGAIN", 100));
                 break; 
             case CREW_LOST:
-                ui.print(TextWrapper.wrap("There is noone left. The ship sits empty with noone to take it home to the mother ship. Now a floating piece of rubbish in space... GAME OVER, TRY AGAIN", 100));
+                view.print(TextWrapper.wrap("There is noone left. The ship sits empty with noone to take it home to the mother ship. Now a floating piece of rubbish in space... GAME OVER, TRY AGAIN", 100));
                 break; 
-            default: ui.print("The run has ended");
+            default: view.print("The run has ended");
         }
         
         // print out run stats
-        ui.print("");
-        ui.print("Planets reached: " + ending.planetsReached()); 
-        ui.print("Oil collected: " + ending.totalOilCollected());
+        view.print("");
+        view.print("Planets reached: " + ending.planetsReached()); 
+        view.print("Oil collected: " + ending.totalOilCollected());
         
         if (ending.anyoneSurvived()) {
-            ui.print("Survivors: " + namesOrNone(ending.survivorNames()));
-            ui.print("Lost: " + namesOrNone(ending.deadNames()));
+            view.print("Survivors: " + namesOrNone(ending.survivorNames()));
+            view.print("Lost: " + namesOrNone(ending.deadNames()));
         } else {
-            ui.print("Lost on the expedition: " + namesOrNone(ending.deadNames()));
+            view.print("Lost on the expedition: " + namesOrNone(ending.deadNames()));
             // dies on the ship
-            ui.print("Lost with the ship: " + namesOrNone(ending.survivorNames()));
+            view.print("Lost with the ship: " + namesOrNone(ending.survivorNames()));
         }
         
         // write run stats to a log

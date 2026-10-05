@@ -6,7 +6,7 @@
 package expedition.io;
 
 import expedition.engine.Ending;
-import expedition.ui.ConsoleUI;
+import expedition.ui.GameView;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -20,10 +20,10 @@ public class RunLogWriter {
     private static final String LOG_FILE = "data/runlog.txt";
     private static final String SCORES_FILE = "data/scores.txt";
     
-    private final ConsoleUI ui;
+    private final GameView view;
     
-    public RunLogWriter(ConsoleUI ui) {
-        this.ui = ui;
+    public RunLogWriter(GameView view) {
+        this.view = view;
     }
     
     // Starts a new log, replacing the previous run's log.
@@ -86,7 +86,7 @@ public class RunLogWriter {
                 out.println(line);
             }
         } catch (IOException e) {
-            ui.print("The ship's log could not be written: " + e.getMessage() + ")");
+            view.print("The ship's log could not be written: " + e.getMessage() + ")");
         }
     }
     

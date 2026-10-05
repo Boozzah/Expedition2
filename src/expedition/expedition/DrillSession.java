@@ -9,8 +9,7 @@ package expedition.expedition;
 import expedition.world.DrillSite; 
 import expedition.engine.RunState; 
 import expedition.engine.GameConfig; 
-import expedition.ui.ConsoleUI;
-import expedition.ui.InputValidator; 
+import expedition.ui.GameView;
 import expedition.crew.hooks.DrillModifier; 
 import expedition.hazard.Hazard;
 import expedition.hazard.HazardOutcome; 
@@ -31,21 +30,19 @@ public class DrillSession
     private final DrillSite site;
     private final Expedition team;
     private final RunState state; 
-    private final ConsoleUI ui; 
-    private final InputValidator input; 
+    private final GameView view;
     private final GameConfig config; 
     private int haul = 0; 
     private int consecutiveEmpty = 0; 
     private boolean forceEnd = false; 
     private List<Hazard> hazards;
     
-    public DrillSession(DrillSite site, Expedition team, RunState state, ConsoleUI ui, InputValidator input, GameConfig config, List<Hazard> hazards)
+    public DrillSession(DrillSite site, Expedition team, RunState state, GameView view, GameConfig config, List<Hazard> hazards)
     {
         this.site = site; 
         this.team = team; 
         this.state = state;
-        this.ui = ui; 
-        this.input = input; 
+        this.view = view;
         this.config = config; 
         this.hazards = hazards;
     }
@@ -61,10 +58,10 @@ public class DrillSession
                 // drilling actions
                 // this shows the progress of what the crew has already collected in this run and asks the player to choose whether they want to drill deeper or return to the ship
                 printDrillStatus();
-                ui.print("1) Drill  2) Ascend");
+                view.print("1) Drill  2) Ascend");
             
                 // this takes in what the choice was from the user (the input) 
-                int choice = input.readInt("Choose an option: ", 1, 2); 
+                int choice = view.readInt("Choose an option: ", 1, 2); 
             
                 // if they picked 2 then they go back to the ship 
                 if (choice == 2)
@@ -83,7 +80,7 @@ public class DrillSession
                 // This kicks the player off if they go past the bottom, and gives a small story
                 if(consecutiveEmpty >= 2)
                 {
-                    ui.print("You watch the site collapse in on itself. Theres nothing more to find here");
+                    view.print("You watch the site collapse in on itself. Theres nothing more to find here");
                     break;
                 }
             }
@@ -117,7 +114,7 @@ public class DrillSession
         // if there is no yield for 2 levels in a row then it is consecutivley empty and is a force quit because you have hit the end. 
         consecutiveEmpty = (yield == 0) ? consecutiveEmpty + 1 : 0; 
         
-        ui.print("Level " + depth + ": " + yield + " oil.");
+        view.print("Level " + depth + ": " + yield + " oil.");
         
         // calls the method that rolls a potentional hazard each time youve drilled a level
         rollHazard(depth); 
@@ -144,8 +141,8 @@ public class DrillSession
         HazardOutcome outcome = hazard.outcomeFor(severity); 
         
         // shows the flavour text that gives the story of what happened
-        ui.print(""); 
-        ui.print(TextWrapper.wrap(outcome.text(), 100));
+        view.print(""); 
+        view.print(TextWrapper.wrap(outcome.text(), 100));
         
         // bundles all the details so that the effect of the hazard can take from them, like the state, the crew you chose, and everything in this drill session
         EffectContext ctx = new EffectContext(state, team, this); 
@@ -179,15 +176,15 @@ public class DrillSession
         int jumpCost = FuelEconomy.jumpCost(state.jumpNumber(), state.ship().hullPercent(), config);
         int hazardPct = (int) Math.round(site.tier().hazardChance(nextLevel) * 100);
 
-        ui.print("");
-        ui.print("Next Level: " + nextLevel + "   Current haul: " + haul + " oil"
+        view.print("");
+        view.print("Next Level: " + nextLevel + "   Current haul: " + haul + " oil"
                 + "   Hazard next level: " + hazardPct + "%");
 
         String tank = "Tank: " + fuel + "/" + capacity + " (" + space + " space)";
         if (haul > space) {
             tank += " - " + (haul - space) + " oil would spill";
         }                                                   
-        ui.print(tank + "   Next jump: " + jumpCost + " fuel");
+        view.print(tank + "   Next jump: " + jumpCost + " fuel");
     }
     
     // Fires a hazard's effects and says what it does to the team/fuelsupply etc
@@ -222,7 +219,7 @@ public class DrillSession
             CrewMember m = crew.get(i);
 
             if (alive[i] && !m.isAlive()) {
-                ui.print("  " + m.getName() + " is killed.");
+                view.print("  " + m.getName() + " is killed.");
                 continue;   // their stat losses are not the story here
             }
 
@@ -232,7 +229,7 @@ public class DrillSession
             changes += change(changes, "composure", m.getComposure() - composure[i]);
 
             if (!changes.isEmpty()) {
-                ui.print("  " + m.getName() + ": " + changes);
+                view.print("  " + m.getName() + ": " + changes);
             }
         }
         
@@ -242,11 +239,11 @@ public class DrillSession
         ship += change(ship, "hull", state.ship().hullPercent() - hullBefore);
 
         if (!ship.isEmpty()) {
-            ui.print("  " + ship);
+            view.print("  " + ship);
         }
                                                               
         if (forceEnd && !closedBefore) {                                                
-            ui.print("  The site is closed. You are coming up.");
+            view.print("  The site is closed. You are coming up.");
         }
     }
     

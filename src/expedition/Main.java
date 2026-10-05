@@ -1,7 +1,7 @@
 package expedition;
 
-import expedition.ui.ConsoleUI;
-import expedition.ui.InputValidator;
+import expedition.ui.ConsoleView;
+import expedition.ui.GameView;
 import expedition.exception.QuitGameException;
 import expedition.exception.DataLoadException;
 import expedition.io.GameDataSource;
@@ -19,11 +19,9 @@ import expedition.io.db.DBManager;
 public class Main {
     public static void main(String[] args) {
         
-        // UI (console input)
-        ConsoleUI ui = new ConsoleUI(System.in, System.out);
-        
-        // Object to validate user input
-        InputValidator input = new InputValidator(ui);
+        // The UI. Everything below only knows it has a GameView, so swapping the
+        // console for the Swing window later only means changing this one line
+        GameView view = new ConsoleView(System.in, System.out);
  
         // Game configuration 
         GameConfig config = GameConfig.load();
@@ -38,22 +36,22 @@ public class Main {
         try {
             new DatabaseInitialiser(new TextFileDataSource()).initialise();
         } catch (DatabaseException | DataLoadException e) {
-            ui.print("Could not start the game - the database could not be set up:");
-            ui.print(" " + e.getMessage());
+            view.print("Could not start the game - the database could not be set up:");
+            view.print(" " + e.getMessage());
             return;
         }
         
         // Selctor object for user to choose which crewmembers to take down on the expedition
-        ExpeditionSelector selector = new ExpeditionSelector(ui, input, config);
+        ExpeditionSelector selector = new ExpeditionSelector(view, config);
         
         // Object to write a run log of stats to a txt file
-        RunLogWriter log = new RunLogWriter(ui);
+        RunLogWriter log = new RunLogWriter(view);
         
         // seed for a set random run
-        Long fixedSeed = parseSeed(args, ui);
+        Long fixedSeed = parseSeed(args, view);
         
         // Main Game engine
-        GameEngine engine = new GameEngine(ui, input, config, data, selector, log, fixedSeed);
+        GameEngine engine = new GameEngine(view, config, data, selector, log, fixedSeed);
     
         
         try {
@@ -62,13 +60,13 @@ public class Main {
             // player typed Q. a deliberate action - exception handles the rest
         } catch (DataLoadException e) {
             // if there is an error loading game data from database
-            ui.print("Could not start the game - a data file could not be read: ");
-            ui.print(" " + e.getMessage());
-            ui.print("Fix the file and try again.");
+            view.print("Could not start the game - a data file could not be read: ");
+            view.print(" " + e.getMessage());
+            view.print("Fix the file and try again.");
         }
         // closes the database cleanly so Derby doesn't have to recover it on the next launch
         DBManager.shutdown();
-        ui.print("Goodbye.");
+        view.print("Goodbye.");
     }
     
     
@@ -76,15 +74,15 @@ public class Main {
     // returns null when no seed given, which means each run is random
     
     
-    private static Long parseSeed(String[] args, ConsoleUI ui) {
+    private static Long parseSeed(String[] args, GameView view) {
         for (int i = 0; i < args.length-1; i++) {
             if (args[i].equals("--seed")) {
                 try {
                     long seed = Long.parseLong(args[i+1]);
-                    ui.print("Seed " + seed + " = this run is reproducable.");
+                    view.print("Seed " + seed + " = this run is reproducable.");
                     return seed;
                 } catch (NumberFormatException e) {
-                    ui.print("Ignoring --seed: \'" + args[i + 1] + "\' is not a number.");
+                    view.print("Ignoring --seed: \'" + args[i + 1] + "\' is not a number.");
                     return null;
                 }
             }

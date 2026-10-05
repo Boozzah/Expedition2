@@ -11,8 +11,7 @@ import expedition.crew.CrewMember;
 import expedition.engine.GameConfig;
 import expedition.engine.RunState;
 import expedition.exception.QuitGameException;
-import expedition.ui.ConsoleUI;
-import expedition.ui.InputValidator;                                                  
+import expedition.ui.GameView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,13 +28,11 @@ public class ExpeditionSelector {
     private static final int MIN_STAMINA = 25;
     private static final int MIN_COMPOSURE = 25;
     
-    private final ConsoleUI ui;
-    private final InputValidator input;
+    private final GameView view;
     private final GameConfig config;
     
-    public ExpeditionSelector(ConsoleUI ui, InputValidator input, GameConfig config) {
-        this.ui = ui;
-        this.input = input;
+    public ExpeditionSelector(GameView view, GameConfig config) {
+        this.view = view;
         this.config = config;
     }
     
@@ -46,13 +43,13 @@ public class ExpeditionSelector {
         List<CrewMember> available = state.eligibleCrew();
         
         if (available.size() < MIN_CREW) {
-            ui.print("");
+            view.print("");
             if (available.isEmpty()) {
-                ui.print("Nobody is fit to deploy.");
+                view.print("Nobody is fit to deploy.");
             } else {
-                ui.print("Only 1 crew member is fit to deploy.");
+                view.print("Only 1 crew member is fit to deploy.");
             }
-            ui.print("This planet cannot be drilled. You have to jump on the fuel you have.");
+            view.print("This planet cannot be drilled. You have to jump on the fuel you have.");
             return null;
         }
         
@@ -72,20 +69,20 @@ public class ExpeditionSelector {
             int pick;
             if (chosen.size() >= MIN_CREW) {
                 // enough aboard to launch, so 0 becomes real answer.
-                pick = input.readInt("Choose crewmember " + (chosen.size() + 1) + ", or 0 to launch with " + chosen.size() + ": ", 0, remaining.size());
+                pick = view.readInt("Choose crewmember " + (chosen.size() + 1) + ", or 0 to launch with " + chosen.size() + ": ", 0, remaining.size());
             } else {
-                pick = input.readInt("Choose crewmember " + (chosen.size() + 1) + " of " + MAX_CREW + ": ", 1, remaining.size());
+                pick = view.readInt("Choose crewmember " + (chosen.size() + 1) + " of " + MAX_CREW + ": ", 1, remaining.size());
                 
             }
             
             
             // "B" undoes the last pick rather than abandoning the screen
-            if (pick == InputValidator.BACK) {
+            if (pick == GameView.BACK) {
                 if(chosen.isEmpty()) {
-                    ui.print("Nothing to go back to.");
+                    view.print("Nothing to go back to.");
                 } else {
                     CrewMember removed = chosen.remove(chosen.size() -1);
-                    ui.print(removed.getName() + " stood down");
+                    view.print(removed.getName() + " stood down");
                 }
                 continue;
             }
@@ -96,11 +93,11 @@ public class ExpeditionSelector {
             
             CrewMember member = remaining.get(pick - 1);
             chosen.add(member);
-            ui.print(" " + member.getName() + " assigned.");
+            view.print(" " + member.getName() + " assigned.");
         
             // a disabled ability due to low stamina must be stated at selection
             if (member.isFatigued()) {
-                ui.print(" " + member.getName() + " is FATIGUED. They will be too tired to use their ability");
+                view.print(" " + member.getName() + " is FATIGUED. They will be too tired to use their ability");
             }
         }
         
@@ -115,10 +112,10 @@ public class ExpeditionSelector {
     // ineligible crew are listed with the reason they cannot go down
     
     private void showRoster(RunState state) {
-        ui.print("");
-        ui.print("--- Crew ---");
+        view.print("");
+        view.print("--- Crew ---");
         for (CrewMember member : state.crew()) {
-            ui.print(String.format("  %-12s %-10s Health:%-4d Stamina:%-4d Composure:%-4d %s", 
+            view.print(String.format("  %-12s %-10s Health:%-4d Stamina:%-4d Composure:%-4d %s", 
                     member.getName(),
                     member.getClass().getSimpleName(),
                     member.getHealth(),
@@ -149,11 +146,11 @@ public class ExpeditionSelector {
     }
     
     private void listNumbered(List<CrewMember> members) {
-        ui.print("");
-        ui.print("Select the associated number of the crewmember you want to leave your main ship and descend to the planet surface.");
+        view.print("");
+        view.print("Select the associated number of the crewmember you want to leave your main ship and descend to the planet surface.");
         for(int i = 0; i < members.size(); i++) {
             CrewMember member = members.get(i);
-            ui.print(" " + (i + 1) + ". " + member.getName() + "  " + statusOf(member));
+            view.print(" " + (i + 1) + ". " + member.getName() + "  " + statusOf(member));
         }
     }
 }
