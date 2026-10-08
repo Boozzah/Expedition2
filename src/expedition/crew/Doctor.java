@@ -8,29 +8,32 @@ package expedition.crew;
 import expedition.crew.hooks.FieldMedic;
 
 public class Doctor extends CrewMember implements FieldMedic {
-    
+
     // Doctor's ability can heal 20 per drill session
     private static final int HEAL_AMOUNT = 20;
-    private static boolean used = false;
-    
+
     // "Once per session" tracked with a flag rather than a counter, since
-    // it's a single use. Currently his ability is not wired in as it will be apart of project 2.
+    // it's a single use. Not static, so the flag belongs to this doctor and not
+    // to the Doctor class as a whole
+    private boolean used = false;
 
     public Doctor(String name, int health, int stamina, int composure) {
         super(name, health, stamina, composure);
     }
-    
-    // use this to reset heal proc
+
+    // DrillSession calls this at the start of every session so the heal is available again
+    @Override
     public void resetForSession() {
         used = false;
     }
-    
+
+    // false once the heal has been used this session
     @Override
     public boolean canTreat() {
         return !used;
     }
-    
-    // implement ability here in project 2
+
+    // heals the target once, then does nothing until the next session
     @Override
     public void treat(CrewMember target) {
         if (used) {
@@ -39,7 +42,7 @@ public class Doctor extends CrewMember implements FieldMedic {
         target.gainHealth(HEAL_AMOUNT);
         used = true;
     }
-    
+
     @Override
     public Role getRole() {
         return Role.DOCTOR;
