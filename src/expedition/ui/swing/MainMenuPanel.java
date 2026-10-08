@@ -5,8 +5,8 @@
  * background, the EXPEDITION title, four menu buttons down the middle, help in the
  * top left and settings + high scores in the top right.
  *
- * It doesn't decide what any button does. It hands the choice to whoever made it,
- * so the screen can be shown on its own before it is connected to the engine.
+ * It doesn't decide what any button does. It hands the choice to whoever made it
+ * (SwingView), which turns it into the MenuChoice the engine is waiting for.
  *
  * All positions are window pixels in the 1280x720 window, measured from Nadia's
  * 4000x2250 example and multiplied by Assets.SCALE.

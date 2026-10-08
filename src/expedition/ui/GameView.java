@@ -18,5 +18,12 @@ public interface GameView {
     int readInt(String prompt, int min, int max) throws QuitGameException;
     String readChoice(String prompt, List<String> options) throws QuitGameException;
     boolean readYesNo(String prompt) throws QuitGameException;
+
+    // Shows the main menu and waits for the player to pick something. The console
+    // prints the text menu, the window shows menu screen
+    MenuChoice showMainMenu() throws QuitGameException;
+
+    // Called once when the program is finished, so a window can close itself
+    void close();
 }
 
