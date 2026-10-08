@@ -76,9 +76,10 @@ public class Expedition {
     }
     
     /* ---- ability lookups -------
-    * One method per hook interface. Each returns only the living members that implement it
-    * so no calling method has to remember to check. An empty list means nobody aboard has that
-    * ability. - only one ability has been implemented in project 1, the rest in project 2
+    * One method per hook interface. Each returns only the living, non fatigued members that
+    * implement it so no calling method has to remember to check. An empty list means nobody
+    * aboard has that ability. - the Miner, Geologist and Doctor are wired in, the rest are
+    * still to come in project 2
     */
     
     public List<DrillModifier> drillModifiers() { return withAbility(DrillModifier.class);}
@@ -92,7 +93,9 @@ public class Expedition {
     private <T> List<T> withAbility(Class<T> type) {
         List<T> found = new ArrayList<>();
         for(CrewMember member : members) {
-            if (member.isAlive() && type.isInstance(member) && member.getStamina() >= 50) {
+            // asks the crew member if they're fatigued rather than checking a number here,
+            // so the fatigue rule only lives in one place (CrewMember)
+            if (member.isAlive() && type.isInstance(member) && !member.isFatigued()) {
                 found.add(type.cast(member));
             }
         }
