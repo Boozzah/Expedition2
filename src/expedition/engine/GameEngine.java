@@ -12,6 +12,7 @@ import expedition.exception.QuitGameException;
 import expedition.ship.FuelEconomy;
 import expedition.ship.Ship;
 import expedition.ui.GameView;
+import expedition.ui.MenuChoice;
 import expedition.world.Planet;
 import expedition.io.GameDataSource;
 import expedition.exception.DataLoadException;
@@ -58,11 +59,12 @@ public class GameEngine {
     public void run() throws QuitGameException, DataLoadException {
         boolean playing = true;
         while(playing) {
-            String choice = view.readChoice("--- MAIN MENU ---", List.of("New Game (n)", "How to Play (h)", "Quit (q)"));
+            // main menu
+            MenuChoice choice = view.showMainMenu();
             switch(choice) {
-                case "New Game (n)": playRun(startNewRun()); break;
-                case "How to Play (h)": showInstructions(); break; 
-                case "Quit (q)": playing = false; break;
+                case NEW_GAME: playRun(startNewRun()); break;
+                case HOW_TO_PLAY: showInstructions(); break;
+                case QUIT: playing = false; break;
             }
         }
     }

@@ -2,6 +2,9 @@ package expedition;
 
 import expedition.ui.ConsoleView;
 import expedition.ui.GameView;
+import expedition.ui.swing.SwingView;
+import java.awt.GraphicsEnvironment;
+import java.util.Arrays;
 import expedition.exception.QuitGameException;
 import expedition.exception.DataLoadException;
 import expedition.io.GameDataSource;
@@ -19,9 +22,10 @@ import expedition.io.db.DBManager;
 public class Main {
     public static void main(String[] args) {
         
-        // The UI. Everything below only knows it has a GameView, so swapping the
-        // console for the Swing window later only means changing this one line
-        GameView view = new ConsoleView(System.in, System.out);
+        // The UI. Everything below only knows it has a GameView. The window is the
+        // default, --console keeps the text version for debugging
+        boolean console = Arrays.asList(args).contains("--console") || GraphicsEnvironment.isHeadless();
+        GameView view = console ? new ConsoleView(System.in, System.out) : new SwingView();
  
         // Game configuration 
         GameConfig config = GameConfig.load();
@@ -67,6 +71,8 @@ public class Main {
         // closes the database cleanly so Derby doesn't have to recover it on the next launch
         DBManager.shutdown();
         view.print("Goodbye.");
+        // closes the window, once it's gone the program ends
+        view.close();
     }
     
     
