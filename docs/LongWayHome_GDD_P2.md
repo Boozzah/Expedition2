@@ -435,11 +435,11 @@ Nadia is producing sprites this project, so the code load leans to Adam. The con
 | Owner | Area |
 |---|---|
 | **Together, first session of Week 10** | `GameView` interface, DB schema, sprite manifest. Agree signatures before splitting — GDD §13.7's warning about spending the final week merging instead of building applies much harder with three build weeks. |
-| **Adam** | Derby layer (`Database`, `DatabaseInitializer`, `DerbyDataSource`, DAOs) · `GameView` refactor and Swing shell · ascent phase · save/resume |
-| **Nadia** | All sprite art · `SpriteLoader` and asset integration · inventory and item classes · crew ability hooks · high-score and main-menu screens · JUnit suite |
+| **Adam** | Derby layer (`Database`, `DatabaseInitializer`, `DerbyDataSource`, DAOs) · `GameView` refactor and Swing shell · crew ability hooks · ascent phase · save/resume |
+| **Nadia** | All sprite art · `SpriteLoader` and asset integration · inventory and item classes · high-score and main-menu screens · JUnit suite |
 | **Either** | Code-smell pass, report, video |
 
-Items and abilities are a good fit for Nadia's coding share: self-contained, well-specified in the GDD, and they touch the sprite work directly.
+Items are a good fit for Nadia's coding share: self-contained, well-specified in the GDD, and they touch the sprite work directly. Crew abilities moved to Adam (8 Oct): they plug into the drill session and the ascent phase, which Adam is already building.
 
 ---
 

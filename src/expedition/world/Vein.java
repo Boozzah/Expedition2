@@ -18,19 +18,19 @@ public class Vein
     }
     
     // returns the amount of oil you drilled at the current level and moves one level deeper
-    // if it hits the bottom it returns 0 because there is no more oil left but we want it so you can keep risking it because you think its just a pocket of no oil 
+    // if it hits the bottom it returns 0 because there is no more oil left but we want it so you can keep risking it because you think its just a pocket of no oil
     public int drillNext()
     {
-        if(drilled >= levels.size())
+        // only real levels have oil, past the bottom it stays at 0
+        int yield = 0;
+        if(drilled < levels.size())
         {
-            return 0; 
+            yield = levels.get(drilled);
         }
-        else 
-        {
-            int yield = levels.get(drilled); 
-            drilled++; 
-            return yield; 
-        }
+        // past the bottom still counts as going a level deeper. If it didn't, the level
+        // number would repeat and give away that the vein has run out
+        drilled++;
+        return yield;
     }
     
     // this calculates how many are left open, the amount of levels - the amount you have drilled

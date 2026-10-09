@@ -3,6 +3,7 @@
  * Runs one trip down a DrillSite: the drill/ascend/use-item loop,
  * yield accumulation, item drops and hazard rolls. The core gameplay
  * loop everything else exists to support.
+ * The Miner, Geologist and Doctor abilities all fire in here.
  */
 package expedition.expedition;
 
@@ -10,7 +11,9 @@ import expedition.world.DrillSite;
 import expedition.engine.RunState; 
 import expedition.engine.GameConfig; 
 import expedition.ui.GameView;
-import expedition.crew.hooks.DrillModifier; 
+import expedition.crew.hooks.DrillModifier;
+import expedition.crew.hooks.FieldMedic;
+import expedition.crew.hooks.VeinInsight;
 import expedition.hazard.Hazard;
 import expedition.hazard.HazardOutcome; 
 import expedition.hazard.SeverityRoller; 
@@ -19,14 +22,11 @@ import expedition.ship.FuelEconomy;
 import expedition.crew.CrewMember;
 import expedition.util.TextWrapper; 
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class DrillSession 
+public class DrillSession
 {
-   /*
-   * TODO: Reset Doctors ability each drill session - will be implemented in project 2
-   */
-    
     private final DrillSite site;
     private final Expedition team;
     private final RunState state; 
@@ -50,6 +50,12 @@ public class DrillSession
     // this runs until the player ascends, a hazard closes the site or two barren levels in a row signal that youve hit the bottom
     public int run()
     {
+        // the Doctor's heal is once per session, so every new session makes it available again
+        for (FieldMedic medic : team.fieldMedics())
+        {
+            medic.resetForSession();
+        }
+
         // we user try catch so that quitting middrill means that you still get the oil you had collected prior
         try
         { 
@@ -74,9 +80,16 @@ public class DrillSession
             
                 if (forceEnd)
                 {
-                    break; 
+                    break;
                 }
-            
+
+                // the Geologist knows when the vein has run out, so the team comes up
+                // at the true bottom instead of drilling into nothing
+                if (geologistCallsBottom())
+                {
+                    break;
+                }
+
                 // This kicks the player off if they go past the bottom, and gives a small story
                 if(consecutiveEmpty >= 2)
                 {
@@ -185,8 +198,69 @@ public class DrillSession
             tank += " - " + (haul - space) + " oil would spill";
         }                                                   
         view.print(tank + "   Next jump: " + jumpCost + " fuel");
+
+        // the Geologist's reading, so the player knows if an empty level is just
+        // a pocket or the real bottom of the vein
+        for (VeinInsight geologist : team.veinInsights())
+        {
+            view.print(geologist.describeRemaining(site.vein().levelsRemaining()));
+        }
     }
-    
+
+    // The Geologist's auto eject. True when the vein has nothing left, so run() can
+    // stop the session. Says who called it so it reads as the ability working
+    private boolean geologistCallsBottom()
+    {
+        for (VeinInsight geologist : team.veinInsights())
+        {
+            if (geologist.shouldAutoEject(site.vein().levelsRemaining()))
+            {
+                view.print(geologist.getName() + " calls it: that was the last of the vein. The team heads back up.");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // The Doctor's ability. After a hazard, a doctor who hasn't healed yet this session
+    // treats whoever on the team is now lowest on health. They can't treat themselves,
+    // the ability is for helping another crew member
+    private void treatInjured(List<CrewMember> injured)
+    {
+        for (FieldMedic medic : team.fieldMedics())
+        {
+            // already used their heal this session
+            if (!medic.canTreat())
+            {
+                continue;
+            }
+
+            // finds the injured crew member with the lowest health, skipping the doctor themselves
+            CrewMember target = null;
+            for (CrewMember m : injured)
+            {
+                if (m != medic && (target == null || m.getHealth() < target.getHealth()))
+                {
+                    target = m;
+                }
+            }
+
+            // nobody else on the team was hurt, so the heal is saved for later in the session
+            if (target == null)
+            {
+                continue;
+            }
+
+            // health is capped, so report what was actually gained rather than the full 20
+            int before = target.getHealth();
+            medic.treat(target);
+            view.print("  " + medic.getName() + " treats " + target.getName() + ": health +" + (target.getHealth() - before));
+
+            // one heal per hazard is enough
+            return;
+        }
+    }
+
     // Fires a hazard's effects and says what it does to the team/fuelsupply etc
     // The effects themselves are silent they just change number
     // so the player would otherwise read severl senteces of story and find the damage later on
@@ -213,7 +287,11 @@ public class DrillSession
         boolean closedBefore = forceEnd;                                                
 
         outcome.applyAll(ctx);
-        
+
+        // crew on this expedition who survived but lost health, for the Doctor
+        List<CrewMember> injured = new ArrayList<>();
+        List<CrewMember> onSite = team.livingMembers();
+
         // now output what changed
         for (int i = 0; i < n; i++) {
             CrewMember m = crew.get(i);
@@ -231,8 +309,16 @@ public class DrillSession
             if (!changes.isEmpty()) {
                 view.print("  " + m.getName() + ": " + changes);
             }
+
+            // lost health to this hazard and is down on the site with the doctor
+            if (m.getHealth() < health[i] && onSite.contains(m)) {
+                injured.add(m);
+            }
         }
-        
+
+        // shown after the damage so the player sees what the hazard did, then the heal
+        treatInjured(injured);
+
         String ship = "";
         ship += change(ship, "oil", haul - haulBefore);
         ship += change(ship, "fuel", state.ship().fuel() - fuelBefore);
