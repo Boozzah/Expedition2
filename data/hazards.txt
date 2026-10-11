@@ -75,3 +75,34 @@ Lightning Strike | STORM | 4 | The rain from the storm gets heavier and heavier,
 Lightning Strike | STORM | 5 | You are repositioning the drill when the lightning hits it. You feel the current burn its way through you, the pain is nothing youve ever felt before, and you pass out. Waking up next to your crewmate who also went through the same thing, everything feels like its been burnt but inside out. Lucky you were grounded or it could have been worse. | STAT: COMPOSURE: -15: ALL:0; STAT: HEALTH: -40: RANDOM:2; CLOSE_SITE; 
 Lightning Strike | STORM | 6 | Your crewmate is fiddling with the drill, with the storm it keeps playing up. Then you see a strike, before you can even call out to them they are shocked. You watch them clench and burn. You can even smell them. The drills electronics get destroyed but thats not a worry to you, its that your crewmate is looking like burnt toast. | CLOSE_SITE; DEATH: 1; STAT: COMPOSURE: -30: ALL:0;
 
+# ---- Ascent hazards (GDD 8) ----
+# Rolled once on the climb back to the ship, not while drilling. A Pilot on the
+# shuttle strips every HULL effect out of these, nothing else.
+
+Debris Field | ASCENT | 1 | Light particulate rattles against the hull on the way up. Nothing gets through. | 
+Debris Field | ASCENT | 2 | A cloud of debris scrapes along the side of the shuttle and you hear the plating buckle. | HULL: -5; 
+Debris Field | ASCENT | 3 | A larger fragment punches a hole in one of the cargo bays and some of the fuel vents out before it seals. | HULL: -12; FUEL: -40; 
+Debris Field | ASCENT | 4 | The shuttle is punched through near the seats. One of the crew is hit by the shrapnel. | HULL: -18; STAT: HEALTH: -25: RANDOM:1; 
+Debris Field | ASCENT | 5 | A long spread of impacts cracks the frame of the shuttle. Two of the crew are thrown against the walls and everyone is shaken. | HULL: -28; STAT: HEALTH: -30: RANDOM:2; STAT: COMPOSURE: -15: ALL:0; 
+Debris Field | ASCENT | 6 | Something comes through the cabin and the air goes with it. By the time the breach is sealed one of the crew is gone. | HULL: -35; DEATH: 1; STAT: COMPOSURE: -30: ALL:0; 
+
+Launch System Failure | ASCENT | 1 | A thruster runs rough for a few seconds and then settles. | 
+Launch System Failure | ASCENT | 2 | An uneven burn wastes propellant on the way up. | FUEL: -50; 
+Launch System Failure | ASCENT | 3 | A thruster cuts out and the ascent has to be dumped and flown again. | FUEL: -80; HULL: -8; 
+Launch System Failure | ASCENT | 4 | A hard gimbal correction throws the cabin sideways and one of the crew hits the bulkhead. | HULL: -15; STAT: HEALTH: -20: RANDOM:1; 
+Launch System Failure | ASCENT | 5 | Partial engine failure. You reach orbit, but barely, and the cabin is burning hot. | HULL: -25; STAT: HEALTH: -30: RANDOM:2; FUEL: -60; 
+Launch System Failure | ASCENT | 6 | The ascent stage fails and the shuttle is recovered as a wreck. One of the crew doesn't make it, and all the oil aboard is lost. | HULL: -35; DEATH: 1; OIL_PCT: -100; 
+
+Gravity Well Snag | ASCENT | 1 | The burn takes longer than planned, but you make it. | 
+Gravity Well Snag | ASCENT | 2 | A poor trajectory costs you propellant. | FUEL: -45; 
+Gravity Well Snag | ASCENT | 3 | You are pulled into a decaying arc and have to fight your way out of it. | FUEL: -75; HULL: -10; 
+Gravity Well Snag | ASCENT | 4 | The correction burn holds everyone at high g for far too long. | STAT: HEALTH: -20: ALL:0; 
+Gravity Well Snag | ASCENT | 5 | The shuttle is dragged through the upper atmosphere and shakes like it's going to come apart. | HULL: -30; STAT: HEALTH: -30: RANDOM:2; STAT: COMPOSURE: -15: ALL:0; 
+Gravity Well Snag | ASCENT | 6 | The burn is not enough. Mass has to be jettisoned to break free, and a crew pod goes with it. | DEATH: 1; HULL: -20; STAT: COMPOSURE: -30: ALL:0; 
+
+Docking Failure | ASCENT | 1 | A clumsy approach, but nothing is damaged. | 
+Docking Failure | ASCENT | 2 | The shuttle bumps the docking collar on the way in. | HULL: -6; 
+Docking Failure | ASCENT | 3 | The clamp will not seat and fuel is burned holding station until it does. | FUEL: -55; HULL: -8; 
+Docking Failure | ASCENT | 4 | The shuttle strikes the docking ring hard and one of the crew is thrown from their seat. | HULL: -18; STAT: HEALTH: -25: RANDOM:1; 
+Docking Failure | ASCENT | 5 | The collar tears and the transfer tunnel vents. Two of the crew are caught in it. | HULL: -25; STAT: HEALTH: -35: RANDOM:2; 
+Docking Failure | ASCENT | 6 | The shuttle strikes the ship and breaks up on the tunnel. One of the crew is lost. | HULL: -30; DEATH: 1; STAT: COMPOSURE: -30: ALL:0; 

@@ -22,10 +22,9 @@ import expedition.ship.FuelEconomy;
 import expedition.crew.CrewMember;
 import expedition.util.TextWrapper; 
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class DrillSession
+public class DrillSession implements HaulHolder
 {
     private final DrillSite site;
     private final Expedition team;
@@ -36,8 +35,10 @@ public class DrillSession
     private int consecutiveEmpty = 0; 
     private boolean forceEnd = false; 
     private List<Hazard> hazards;
+    // oil from earlier sites on this trip, still on the shuttle until the ascent
+    private final int oilAboard;
     
-    public DrillSession(DrillSite site, Expedition team, RunState state, GameView view, GameConfig config, List<Hazard> hazards)
+    public DrillSession(DrillSite site, Expedition team, RunState state, GameView view, GameConfig config, List<Hazard> hazards, int oilAboard)
     {
         this.site = site; 
         this.team = team; 
@@ -45,6 +46,7 @@ public class DrillSession
         this.view = view;
         this.config = config; 
         this.hazards = hazards;
+        this.oilAboard = oilAboard;
     }
     
     // this runs until the player ascends, a hazard closes the site or two barren levels in a row signal that youve hit the bottom
@@ -166,12 +168,14 @@ public class DrillSession
     
     
     // important for hazards as you may have loss 40% of oil, and this calculates that
+    @Override
     public void reduceHaulByPercent(int percent)
     {
         haul = haul - (haul * percent / 100); 
     }
     
     // if the site closes then you are forced to end and this site will stay permanently closed. 
+    @Override
     public void closeSiteAndEnd()
     {
         site.close();
@@ -185,7 +189,8 @@ public class DrillSession
         int nextLevel = site.vein().currentDepth() + 1;
         int fuel = state.ship().fuel();
         int capacity = config.tankCapacity();               
-        int space = capacity - fuel;
+        // oil from earlier sites goes in the tank first, so it takes up space too
+        int space = Math.max(0, capacity - fuel - oilAboard);
         int jumpCost = FuelEconomy.jumpCost(state.jumpNumber(), state.ship().hullPercent(), config);
         int hazardPct = (int) Math.round(site.tier().hazardChance(nextLevel) * 100);
 
@@ -193,9 +198,15 @@ public class DrillSession
         view.print("Next Level: " + nextLevel + "   Current haul: " + haul + " oil"
                 + "   Hazard next level: " + hazardPct + "%");
 
-        String tank = "Tank: " + fuel + "/" + capacity + " (" + space + " space)";
-        if (haul > space) {
-            tank += " - " + (haul - space) + " oil would spill";
+        String tank = "Tank: " + fuel + "/" + capacity;
+        if (oilAboard > 0) {
+            tank += " + " + oilAboard + " oil on the shuttle";
+        }
+        tank += " (" + space + " space)";
+
+        int spill = oilAboard + haul - (capacity - fuel);
+        if (spill > 0) {
+            tank += " - " + spill + " oil would spill";
         }                                                   
         view.print(tank + "   Next jump: " + jumpCost + " fuel");
 
@@ -262,85 +273,26 @@ public class DrillSession
     }
 
     // Fires a hazard's effects and says what it does to the team/fuelsupply etc
-    // The effects themselves are silent they just change number
-    // so the player would otherwise read severl senteces of story and find the damage later on
-    // report it to the player here
+    // The effects themselves are silent they just change numbers, so HazardReport
+    // takes a snapshot first and reports the difference to the player afterwards
     private void applyAndReport(HazardOutcome outcome, EffectContext ctx) {
-        List<CrewMember> crew = state.crew();
-        int n = crew.size();
-        
-        // everything that an effect can touch
-        int[] health = new int[n];                          
-        int[] stamina = new int[n];                                                     
-        int[] composure = new int[n];
-        boolean[] alive = new boolean[n];
-        for (int i = 0; i < n; i++) {
-            CrewMember m = crew.get(i);
-            health[i] = m.getHealth();
-            stamina[i] = m.getStamina();                    
-            composure[i] = m.getComposure();
-            alive[i] = m.isAlive();
-        }                                                   
+        HazardReport report = new HazardReport(state, view);
         int haulBefore = haul;
-        int fuelBefore = state.ship().fuel();
-        int hullBefore = state.ship().hullPercent();
-        boolean closedBefore = forceEnd;                                                
+        boolean closedBefore = forceEnd;
 
         outcome.applyAll(ctx);
 
-        // crew on this expedition who survived but lost health, for the Doctor
-        List<CrewMember> injured = new ArrayList<>();
-        List<CrewMember> onSite = team.livingMembers();
-
-        // now output what changed
-        for (int i = 0; i < n; i++) {
-            CrewMember m = crew.get(i);
-
-            if (alive[i] && !m.isAlive()) {
-                view.print("  " + m.getName() + " is killed.");
-                continue;   // their stat losses are not the story here
-            }
-
-            String changes = "";
-            changes += change(changes, "health", m.getHealth() - health[i]);
-            changes += change(changes, "stamina", m.getStamina() - stamina[i]);
-            changes += change(changes, "composure", m.getComposure() - composure[i]);
-
-            if (!changes.isEmpty()) {
-                view.print("  " + m.getName() + ": " + changes);
-            }
-
-            // lost health to this hazard and is down on the site with the doctor
-            if (m.getHealth() < health[i] && onSite.contains(m)) {
-                injured.add(m);
-            }
-        }
+        // now output what changed. injured is the crew on this expedition who
+        // survived but lost health, for the Doctor
+        List<CrewMember> injured = report.printCrewChanges(team);
 
         // shown after the damage so the player sees what the hazard did, then the heal
         treatInjured(injured);
 
-        String ship = "";
-        ship += change(ship, "oil", haul - haulBefore);
-        ship += change(ship, "fuel", state.ship().fuel() - fuelBefore);
-        ship += change(ship, "hull", state.ship().hullPercent() - hullBefore);
+        report.printShipChanges(haul - haulBefore);
 
-        if (!ship.isEmpty()) {
-            view.print("  " + ship);
-        }
-                                                              
-        if (forceEnd && !closedBefore) {                                                
+        if (forceEnd && !closedBefore) {
             view.print("  The site is closed. You are coming up.");
         }
-    }
-    
-    // changes numbers into readable text, and handles commas between items
-    private String change(String soFar, String label, int change)
-    {
-        if (change == 0) {
-            return "";
-        }                                                   
-        String sep = soFar.isEmpty() ? "" : ", ";                                       
-        String sign = (change > 0) ? "+" : "";
-        return sep + label + " " + sign + change;
     }
 }
