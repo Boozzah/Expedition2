@@ -71,10 +71,11 @@ public class DrillSession implements HaulHolder
                 // this takes in what the choice was from the user (the input) 
                 int choice = view.readInt("Choose an option: ", 1, 2); 
             
-                // if they picked 2 then they go back to the ship 
-                if (choice == 2)
+                // only an actual 1 drills deeper. 2 and Back both take the team back up to the
+                // ship, before this Back fell through and drilled another level
+                if (choice != 1)
                 {
-                    break; 
+                    break;
                 }
             
                 // checks if the player got a hazard so that it can also quit out for you even though it hasnt reached the end
