@@ -1,7 +1,7 @@
 /*
  * Item
  * Base type for all carried items: name, description, and the
- * polymorphic use() effect when consumed. TO BE IMPLEMENTED IN PROJECT 2
+ * polymorphic use() effect when consumed.
  */
 package expedition.item;
 

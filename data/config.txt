@@ -28,6 +28,10 @@ COMPOSURE_DEATH_PENALTY=25
 ASCENT_TRIGGER_BASE=20
 ASCENT_TRIGGER_PER_EXTRA_TRIP=8
 
+# ---- Items ----
+# how many items the ship can carry
+INVENTORY_SLOTS=8
+
 # ---------------------------------------------------------------------------
 # NOT YET WIRED UP. These are in GDD but GameConfig doesn't read them yet,
 # so putting them here would do nothing - they'd be silently ignored. Listed so
@@ -49,5 +53,4 @@ ASCENT_TRIGGER_PER_EXTRA_TRIP=8
 #   ITEM_DROP_SURVEYOR_BONUS    7%    (hardcoded in Surveyor)
 #   JUMP_EVENT_CHANCE           60%   (not implemented)
 #   EMPTY_LEVELS_BEFORE_CLOSE   2     (DrillSession, in progress)
-#   INVENTORY_SLOTS             8     (not implemented)
 #   MINER_OIL_BONUS             8%    (hardcoded in Miner)

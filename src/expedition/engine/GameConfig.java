@@ -29,9 +29,12 @@ public class GameConfig {
     private final int ascentTriggerBase;
     private final int ascentTriggerPerExtraTrip;
     
+    // how many items the ship can carry
+    private final int inventorySlots;
+    
     private GameConfig(int composureDeathPenalty, int jumpCostBase, int jumpCostIncrement, int startingFuel, int tankCapacity, 
                         int healthRestRecovery, int staminaRestRecovery, int composureRestRecovery, int staminaExpeditionCost,
-                        int ascentTriggerBase, int ascentTriggerPerExtraTrip)
+                        int ascentTriggerBase, int ascentTriggerPerExtraTrip, int inventorySlots)
     {
         this.composureDeathPenalty = composureDeathPenalty;
         this.jumpCostBase = jumpCostBase; 
@@ -44,6 +47,7 @@ public class GameConfig {
         this.staminaExpeditionCost = staminaExpeditionCost;
         this.ascentTriggerBase = ascentTriggerBase;
         this.ascentTriggerPerExtraTrip = ascentTriggerPerExtraTrip;
+        this.inventorySlots = inventorySlots;
     }
     
     // static factory method
@@ -60,6 +64,7 @@ public class GameConfig {
         int staminaExpeditionCost = 35;
         int ascentTriggerBase = 20; // GDD 8: 20% chance of an ascent hazard
         int ascentTriggerPerExtraTrip = 8; // +8% for every extra site drilled at the same planet
+        int inventorySlots = 8; // GDD 10: 8 slots, a 9th item means throwing one away
         
         try (BufferedReader reader = new BufferedReader(new FileReader("data/config.txt"))) {
               String line;
@@ -97,6 +102,7 @@ public class GameConfig {
                           case "STAMINA_EXPEDITION_COST" -> staminaExpeditionCost = Integer.parseInt(value);
                           case "ASCENT_TRIGGER_BASE" -> ascentTriggerBase = Integer.parseInt(value);
                           case "ASCENT_TRIGGER_PER_EXTRA_TRIP" -> ascentTriggerPerExtraTrip = Integer.parseInt(value);
+                          case "INVENTORY_SLOTS" -> inventorySlots = Integer.parseInt(value);
                           default -> { }   // unknown key - ignore it, the file may be from a later version
                       }
                   } catch (NumberFormatException e) {
@@ -111,7 +117,7 @@ public class GameConfig {
         return new GameConfig(composureDeathPenalty, jumpCostBase, jumpCostIncrement, 
                               startingFuel, tankCapacity, healthRestRecovery, 
                               staminaRestRecovery, composureRestRecovery, staminaExpeditionCost,
-                              ascentTriggerBase, ascentTriggerPerExtraTrip);
+                              ascentTriggerBase, ascentTriggerPerExtraTrip, inventorySlots);
     }
     
     // Getters
@@ -126,4 +132,5 @@ public class GameConfig {
     public int staminaExpeditionCost() { return staminaExpeditionCost; }
     public int ascentTriggerBase() { return ascentTriggerBase; }
     public int ascentTriggerPerExtraTrip() { return ascentTriggerPerExtraTrip; }
+    public int inventorySlots() { return inventorySlots; }
 }
