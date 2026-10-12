@@ -29,7 +29,7 @@ public class ItemTest {
     {
         GameConfig config = GameConfig.load();
         ship = new Ship(config);
-        RunState state = new RunState(1L, ship, List.of(), List.of(), 0, config);
+        RunState state = new RunState(1L, ship, List.of(), List.of(), 0, config, new ItemTable(List.of()));
         ctx = new EffectContext(state, null, null);
         crew = new Miner("Test", 50, 50, 50);
     }

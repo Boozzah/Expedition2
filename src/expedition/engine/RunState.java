@@ -4,6 +4,7 @@ import expedition.crew.CrewMember;
 import expedition.world.Planet;
 import expedition.ship.Ship;
 import expedition.expedition.Expedition;
+import expedition.item.ItemTable;
 import java.util.List;
 import java.util.Random;
 import java.util.ArrayList;
@@ -12,7 +13,7 @@ import java.util.Collections;
 /*
  * RunState
  * The single source of truth for a run in progress — ship, crew, route,
- * RNG seed, current position, and how the run ended.
+ * RNG seed, current position, the items that can be found, and how the run ended.
  */
 
 public class RunState  {
@@ -23,17 +24,19 @@ public class RunState  {
     private final List<CrewMember> crew;
     private final List<Planet> route;
     private final GameConfig config;
+    private final ItemTable itemTable;
     
     private int planetIndex = 0;
     private Ending ending = null;
     private int totalOilCollected = 0;
     
-    public RunState(long seed, Ship ship, List<CrewMember> crew, List<Planet> planetPool, int planetsPerRun, GameConfig config) {
+    public RunState(long seed, Ship ship, List<CrewMember> crew, List<Planet> planetPool, int planetsPerRun, GameConfig config, ItemTable itemTable) {
         this.seed = seed;
         this.rng = new Random(seed);
         this.ship = ship;
         this.crew = crew;
         this.config = config;
+        this.itemTable = itemTable;
         
         // draw this run's route from the planet pool
         List<Planet> pool = new ArrayList<>(planetPool); // copy over don't reorder
@@ -53,6 +56,10 @@ public class RunState  {
     
     public Ship ship() { 
         return this.ship; 
+    }
+    
+    public ItemTable itemTable() {
+        return this.itemTable;
     }
     
     public List<CrewMember> crew() { 

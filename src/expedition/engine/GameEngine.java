@@ -14,6 +14,7 @@ import expedition.ship.Ship;
 import expedition.ui.GameView;
 import expedition.ui.MenuChoice;
 import expedition.world.Planet;
+import expedition.item.ItemTable;
 import expedition.io.GameDataSource;
 import expedition.exception.DataLoadException;
 import expedition.expedition.ExpeditionSelector;
@@ -87,7 +88,10 @@ public class GameEngine {
         // load hazards
         allHazards = data.loadHazards();
         
-        return new RunState(seed, ship, crew, planets, ROUTE_LENGTH, config);
+        // every item that can be found this run, used by drops and ITEM hazards
+        ItemTable items = new ItemTable(data.loadItems());
+        
+        return new RunState(seed, ship, crew, planets, ROUTE_LENGTH, config, items);
     }
     
     // The actual gameplay loop
