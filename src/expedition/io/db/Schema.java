@@ -48,6 +48,19 @@ final class Schema {
             // A hazard can only have one row per severity level - composite PK
             + "PRIMARY KEY (HAZARD_ID, SEVERITY))";
     
+    // the item recipes from items.txt. ID keeps them in file order like PLANETS and HAZARDS,
+    // so a seeded run picks the same items whether they came from the file or the database
+    static final String ITEMS = 
+            "CREATE TABLE ITEMS ("
+            + "ID INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, "
+            // Engineer finds Repair Kits by name, so two items can't share one
+            + "NAME VARCHAR(40) NOT NULL UNIQUE, "
+            + "KIND VARCHAR(20) NOT NULL, "
+            + "AMOUNT INTEGER NOT NULL, "
+            + "BONUS INTEGER NOT NULL, "
+            + "DROP_WEIGHT INTEGER NOT NULL, "
+            + "DESCRIPTION VARCHAR(500) NOT NULL)";
+    
     private Schema() {
     }
 }

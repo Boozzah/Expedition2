@@ -11,6 +11,7 @@ import expedition.exception.DataLoadException;
 import expedition.exception.DatabaseException;
 import expedition.hazard.Hazard;
 import expedition.io.GameDataSource;
+import expedition.item.ItemDefinition;
 import expedition.world.Planet;
 
 import java.util.List;
@@ -41,6 +42,15 @@ public class DerbyDataSource implements GameDataSource {
             return new HazardDao().findAll();
         } catch (DatabaseException e) {
             throw new DataLoadException("HAZARDS", e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<ItemDefinition> loadItems() throws DataLoadException {
+        try {
+            return new ItemDao().findAll();
+        } catch (DatabaseException e) {
+            throw new DataLoadException("ITEMS", e.getMessage(), e);
         }
     }
 }

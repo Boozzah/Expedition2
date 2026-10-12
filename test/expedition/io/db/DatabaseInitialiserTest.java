@@ -19,7 +19,7 @@ import expedition.exception.DataLoadException;
 public class DatabaseInitialiserTest {
     
     @Test
-    public void initialiseCreatesAllFourTables() throws DatabaseException, DataLoadException, SQLException {
+    public void initialiseCreatesAllTheTables() throws DatabaseException, DataLoadException, SQLException {
         
         new DatabaseInitialiser(new TextFileDataSource()).initialise();
         
@@ -27,6 +27,7 @@ public class DatabaseInitialiserTest {
         assertTrue("PLANETS table should exist", tableExists("PLANETS"));
         assertTrue("HAZARDS table should exist", tableExists("HAZARDS"));
         assertTrue("HAZARD_OUTCOMES table should exist", tableExists("HAZARD_OUTCOMES"));
+        assertTrue("ITEMS table should exist", tableExists("ITEMS"));
         
     }
     

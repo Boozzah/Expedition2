@@ -31,6 +31,7 @@ public class DatabaseInitialiser {
             createIfAbsent("PLANETS", Schema.PLANETS);
             createIfAbsent("HAZARDS", Schema.HAZARDS);
             createIfAbsent("HAZARD_OUTCOMES", Schema.HAZARD_OUTCOMES);
+            createIfAbsent("ITEMS", Schema.ITEMS);
             
             
             // first run only - once the crew are in, the table is never emptied
@@ -47,6 +48,12 @@ public class DatabaseInitialiser {
 
             if (isEmpty("HAZARDS")) {
                 new HazardDao().insertAll(seedSource.loadHazards());
+            }
+            
+            // added after the other tables, so a database made before items existed
+            // gets the table and its rows on the next launch without being deleted
+            if (isEmpty("ITEMS")) {
+                new ItemDao().insertAll(seedSource.loadItems());
             }
             
         } catch (SQLException e) {
