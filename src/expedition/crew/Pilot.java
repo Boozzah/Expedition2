@@ -1,8 +1,8 @@
 /*
  * Pilot
- * Crew role. Implements AscentModifier — can strip hull-damage
- * effects from a rolled ascent hazard outcome. - not yet implemented, part of project
- * 2
+ * Crew role. Implements AscentModifier — strips the hull-damage
+ * effects from a rolled ascent hazard outcome. Crew injury, fuel loss,
+ * oil loss and death still happen (GDD 8).
  */
 package expedition.crew;
 
@@ -23,7 +23,7 @@ public class Pilot extends CrewMember implements AscentModifier{
     public HazardOutcome modifyAscent(HazardOutcome base) {
         // Build a new list and new HazardOutcome rather than changing the base effect.
         // HazardOutcome is immutable on purpose - the shared HazardOutcome object is loaded once,
-        // from file and is reused every run. Editing it here would stip hull damage from that hazard for the rest of the game.
+        // from file and is reused every run. Editing it here would strip hull damage from that hazard for the rest of the game.
         List<Effect> filtered = new ArrayList<>();
         for(Effect effect : base.effects()) {
             if (!(effect instanceof HullEffect)) {

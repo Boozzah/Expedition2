@@ -25,8 +25,13 @@ public class GameConfig {
     private final int staminaRestRecovery;
     private final int composureRestRecovery;
     
+    // ascent hazard chance, in percent
+    private final int ascentTriggerBase;
+    private final int ascentTriggerPerExtraTrip;
+    
     private GameConfig(int composureDeathPenalty, int jumpCostBase, int jumpCostIncrement, int startingFuel, int tankCapacity, 
-                        int healthRestRecovery, int staminaRestRecovery, int composureRestRecovery, int staminaExpeditionCost)
+                        int healthRestRecovery, int staminaRestRecovery, int composureRestRecovery, int staminaExpeditionCost,
+                        int ascentTriggerBase, int ascentTriggerPerExtraTrip)
     {
         this.composureDeathPenalty = composureDeathPenalty;
         this.jumpCostBase = jumpCostBase; 
@@ -37,6 +42,8 @@ public class GameConfig {
         this.staminaRestRecovery = staminaRestRecovery;
         this.composureRestRecovery = composureRestRecovery;
         this.staminaExpeditionCost = staminaExpeditionCost;
+        this.ascentTriggerBase = ascentTriggerBase;
+        this.ascentTriggerPerExtraTrip = ascentTriggerPerExtraTrip;
     }
     
     // static factory method
@@ -51,6 +58,8 @@ public class GameConfig {
         int staminaRestRecovery = 25;
         int composureRestRecovery = 8;
         int staminaExpeditionCost = 35;
+        int ascentTriggerBase = 20; // GDD 8: 20% chance of an ascent hazard
+        int ascentTriggerPerExtraTrip = 8; // +8% for every extra site drilled at the same planet
         
         try (BufferedReader reader = new BufferedReader(new FileReader("data/config.txt"))) {
               String line;
@@ -86,6 +95,8 @@ public class GameConfig {
                           case "STAMINA_REST_RECOVERY" -> staminaRestRecovery = Integer.parseInt(value);
                           case "COMPOSURE_REST_RECOVERY" -> composureRestRecovery = Integer.parseInt(value);
                           case "STAMINA_EXPEDITION_COST" -> staminaExpeditionCost = Integer.parseInt(value);
+                          case "ASCENT_TRIGGER_BASE" -> ascentTriggerBase = Integer.parseInt(value);
+                          case "ASCENT_TRIGGER_PER_EXTRA_TRIP" -> ascentTriggerPerExtraTrip = Integer.parseInt(value);
                           default -> { }   // unknown key - ignore it, the file may be from a later version
                       }
                   } catch (NumberFormatException e) {
@@ -99,7 +110,8 @@ public class GameConfig {
         
         return new GameConfig(composureDeathPenalty, jumpCostBase, jumpCostIncrement, 
                               startingFuel, tankCapacity, healthRestRecovery, 
-                              staminaRestRecovery, composureRestRecovery, staminaExpeditionCost);
+                              staminaRestRecovery, composureRestRecovery, staminaExpeditionCost,
+                              ascentTriggerBase, ascentTriggerPerExtraTrip);
     }
     
     // Getters
@@ -112,4 +124,6 @@ public class GameConfig {
     public int staminaRestRecovery() { return staminaRestRecovery;}
     public int composureRestRecovery() { return composureRestRecovery;}
     public int staminaExpeditionCost() { return staminaExpeditionCost; }
+    public int ascentTriggerBase() { return ascentTriggerBase; }
+    public int ascentTriggerPerExtraTrip() { return ascentTriggerPerExtraTrip; }
 }

@@ -20,6 +20,7 @@ import expedition.expedition.ExpeditionSelector;
 import expedition.expedition.Expedition;
 import expedition.world.DrillSite;
 import expedition.expedition.DrillSession;
+import expedition.expedition.AscentPhase;
 import expedition.io.RunLogWriter;
 import expedition.hazard.HazardSet;
 import expedition.hazard.Hazard;
@@ -178,6 +179,10 @@ public class GameEngine {
         // each is a drill phase. No extra stamina, the cost is more hazard
         // exposure, with a bigger haul at stake
         
+        // the oil stays on the shuttle until the team is back on the ship,
+        // so it only goes in the tank after the ascent
+        int oilAboard = 0;
+        
         while (true) {
             // re read each pass: closed by a hazard, or drilled dry,
             // drops out of the list before the next choice
@@ -221,19 +226,18 @@ public class GameEngine {
                 }
             }
             
-            int haul = new DrillSession(site, team, state, view, config, applicable).run();
-            
-            // The oil is the fuel. addOil banks it toward the run total and
-            // pours it into the tank, returning how much actually fitted
-            int stored = state.addOil(haul);
+            int haul = new DrillSession(site, team, state, view, config, applicable, oilAboard).run();
+            oilAboard += haul;
             view.print("");
             view.print("Hauled " + haul + " oil.");
-            if (stored < haul) {
-                view.print("The tank is full. " + (haul - stored) + " oil left behind.");
-            }
             
             // a hazard could have killed the last of the crew
             if (state.isRunOver()) {
+                break;
+            }
+            
+            // or everyone who came down, so there's nobody left to move
+            if (team.livingMembers().isEmpty()) {
                 break;
             }
             
@@ -241,10 +245,42 @@ public class GameEngine {
                 break;
             }
         }
+        
+        ascend(state, planet, team, oilAboard);
         return team;
     }
     
-    // hull percent does not mean anything at this stage, will be more useful in project 2
+    // The climb back to the ship, then whatever oil survived it goes in the tank
+    private void ascend(RunState state, Planet planet, Expedition team, int oilAboard) {
+        // the whole team died down there, nobody is left to fly the shuttle back up
+        if (team.livingMembers().isEmpty()) {
+            if (oilAboard > 0) {
+                view.print("Nobody is left to fly the shuttle back up. The " + oilAboard + " oil is lost with it.");
+            }
+            return;
+        }
+        
+        // only the ascent hazards, the planet's own hazards are for drilling
+        List<Hazard> ascentHazards = new ArrayList<>();
+        for (Hazard h : allHazards) {
+            if (h.set() == HazardSet.ASCENT) {
+                ascentHazards.add(h);
+            }
+        }
+        
+        int oil = new AscentPhase(team, state, view, config, ascentHazards, oilAboard).run(planet);
+        
+        // The oil is the fuel. addOil banks it toward the run total and
+        // pours it into the tank, returning how much actually fitted
+        int stored = state.addOil(oil);
+        view.print("");
+        view.print("Back aboard the ship with " + oil + " oil.");
+        if (stored < oil) {
+            view.print("The tank is full. " + (oil - stored) + " oil left behind.");
+        }
+    }
+    
+    // hull goes down from ascent hazards. It makes every jump cost more, and at 0% the run ends
     private void reportStatus(RunState state) {
         view.print(""); 
         view.print("=== Jump " + state.jumpNumber() + " ===");
@@ -320,7 +356,7 @@ public class GameEngine {
         }
         
         // hull reaches 0% hull failure
-        // not actually a reachable end until project 2
+        // ascent hazards are what wear the hull down to this
         if (state.ship().hullPercent() <=0) {
             state.endRun(EndingReason.HULL_FAILURE);
         }

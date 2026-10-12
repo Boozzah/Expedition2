@@ -33,10 +33,11 @@ public class Doctor extends CrewMember implements FieldMedic {
         return !used;
     }
 
-    // heals the target once, then does nothing until the next session
+    // heals the target once, then does nothing until the next session.
+    // Nobody can be healed back from the dead
     @Override
     public void treat(CrewMember target) {
-        if (used) {
+        if (used || !target.isAlive()) {
             return;
         }
         target.gainHealth(HEAL_AMOUNT);

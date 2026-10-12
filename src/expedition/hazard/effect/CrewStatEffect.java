@@ -2,7 +2,7 @@
  * CrewStatEffect
  * Effect for code STAT:<stat>:<delta>:<target>:<count> — applies a
  * health/stamina/composure change to one or more chosen crew
- * members.
+ * members. A crew member whose health reaches 0 dies.
  */
 package expedition.hazard.effect;
 
@@ -47,6 +47,12 @@ public record CrewStatEffect(Stat stat, int amount, Target target, int count) im
         
         for (CrewMember member : victims) {
             applyTo(member);
+
+            // 0 health is a death. Goes through killCrew like the DEATH effect does,
+            // so the rest of the crew still lose composure for witnessing it
+            if (member.isAlive() && member.getHealth() == 0) {
+                ctx.state().killCrew(member);
+            }
         }
     }
     

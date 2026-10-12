@@ -94,6 +94,13 @@ public abstract class CrewMember {
         return stamina < FATIGUE_THRESHOLD;
     }
     
+    // true if going down would leave this crew member fatigued. The stamina cost comes off
+    // when the team launches, so checking isFatigued() at selection missed anyone the cost
+    // tips under the threshold, and their ability stopped working with no warning
+    public boolean fatiguedAfter(int staminaCost) {
+        return stamina - staminaCost < FATIGUE_THRESHOLD;
+    }
+    
     // each subclass returns its own role, so the database can save which role 
     // a crew member is without checking the class with instanceof
     public abstract Role getRole();

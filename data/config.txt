@@ -23,6 +23,11 @@ COMPOSURE_REST_RECOVERY=8
 # ---- Crew: consequences ----
 COMPOSURE_DEATH_PENALTY=25
 
+# ---- Ascent: the climb back to the ship ----
+# percent chance of an ascent hazard, plus more for every extra site drilled on the same planet
+ASCENT_TRIGGER_BASE=20
+ASCENT_TRIGGER_PER_EXTRA_TRIP=8
+
 # ---------------------------------------------------------------------------
 # NOT YET WIRED UP. These are in GDD but GameConfig doesn't read them yet,
 # so putting them here would do nothing - they'd be silently ignored. Listed so
@@ -42,8 +47,6 @@ COMPOSURE_DEATH_PENALTY=25
 #   COMPOSURE_SHAKEN_THRESHOLD  40    (not implemented)
 #   ITEM_DROP_BASE              8%    (not implemented)
 #   ITEM_DROP_SURVEYOR_BONUS    7%    (hardcoded in Surveyor)
-#   ASCENT_TRIGGER_BASE         20%   (not implemented)
-#   ASCENT_TRIGGER_PER_EXTRA_TRIP 8%  (not implemented)
 #   JUMP_EVENT_CHANCE           60%   (not implemented)
 #   EMPTY_LEVELS_BEFORE_CLOSE   2     (DrillSession, in progress)
 #   INVENTORY_SLOTS             8     (not implemented)

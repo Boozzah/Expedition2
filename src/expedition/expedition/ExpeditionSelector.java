@@ -96,8 +96,8 @@ public class ExpeditionSelector {
             view.print(" " + member.getName() + " assigned.");
         
             // a disabled ability due to low stamina must be stated at selection
-            if (member.isFatigued()) {
-                view.print(" " + member.getName() + " is FATIGUED. They will be too tired to use their ability");
+            if (member.fatiguedAfter(config.staminaExpeditionCost())) {
+                view.print(" " + member.getName() + " will be FATIGUED on this trip. They will be too tired to use their ability");
             }
         }
         
@@ -139,7 +139,8 @@ public class ExpeditionSelector {
         if (member.getComposure() < MIN_COMPOSURE) {
               return "Composure " + member.getComposure() + ", cannot deploy";
         }
-        if (member.isFatigued()) {
+        // checked after the trip's stamina cost, since that's when the ability would be used
+        if (member.fatiguedAfter(config.staminaExpeditionCost())) {
             return "FATIGUED, ability unavailable";
         }
         return "READY";
