@@ -116,6 +116,20 @@ public class DrillSessionItemTest {
     }
     
     @Test
+    public void drillMenuCanUseAnItemWithoutDrilling()
+    {
+        state.ship().damageHull(30);
+        bag.add(new expedition.item.RepairKit("Repair Kit", "test", 25));
+        
+        // 3 = use item, 1 = the Repair Kit, then 2 = ascend
+        DrillSession session = session(new Surveyor("Hannah", 100, 100, 100), "3\n1\n2\n");
+        session.run();
+        
+        assertEquals(95, state.ship().hullPercent());
+        assertFalse("using an item shouldn't drill a level", printed.toString().contains("Level 1:"));
+    }
+    
+    @Test
     public void drillStatusShowsTheSurveyorBonus()
     {
         // 2 = ascend straight away, run() still prints the status first

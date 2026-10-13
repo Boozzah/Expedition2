@@ -20,6 +20,7 @@ import expedition.hazard.HazardOutcome;
 import expedition.hazard.SeverityRoller; 
 import expedition.hazard.effect.EffectContext; 
 import expedition.item.Item;
+import expedition.item.ItemMenu;
 import expedition.ship.Inventory;
 import expedition.ship.FuelEconomy;
 import expedition.crew.CrewMember;
@@ -41,6 +42,7 @@ public class DrillSession implements HaulHolder
     private List<Hazard> hazards;
     // oil from earlier sites on this trip, still on the shuttle until the ascent
     private final int oilAboard;
+    private final ItemMenu itemMenu;
     
     public DrillSession(DrillSite site, Expedition team, RunState state, GameView view, GameConfig config, List<Hazard> hazards, int oilAboard)
     {
@@ -51,6 +53,7 @@ public class DrillSession implements HaulHolder
         this.config = config; 
         this.hazards = hazards;
         this.oilAboard = oilAboard;
+        this.itemMenu = new ItemMenu(state, view);
     }
     
     // this runs until the player ascends, a hazard closes the site or two barren levels in a row signal that youve hit the bottom
@@ -70,10 +73,21 @@ public class DrillSession implements HaulHolder
                 // drilling actions
                 // this shows the progress of what the crew has already collected in this run and asks the player to choose whether they want to drill deeper or return to the ship
                 printDrillStatus();
-                view.print("1) Drill  2) Ascend");
+                
+                // GDD 10: items can be used between drill levels. Only offered when there
+                // is something in the hold, so an empty hold doesnt add a dead option
+                boolean hasItems = !state.ship().inventory().isEmpty();
+                view.print(hasItems ? "1) Drill  2) Ascend  3) Use item" : "1) Drill  2) Ascend");
             
                 // this takes in what the choice was from the user (the input) 
-                int choice = view.readInt("Choose an option: ", 1, 2); 
+                int choice = view.readInt("Choose an option: ", 1, hasItems ? 3 : 2); 
+                
+                // using an item doesnt drill, it goes back round to the same choice
+                if (choice == 3)
+                {
+                    itemMenu.open(team);
+                    continue;
+                }
             
                 // only an actual 1 drills deeper. 2 and Back both take the team back up to the
                 // ship, before this Back fell through and drilled another level
