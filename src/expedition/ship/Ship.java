@@ -2,7 +2,8 @@ package expedition.ship;
 
 /*
  * Ship
- * Fuel, tank capacity, hull percentage, costs/spend.
+ * Fuel, tank capacity, hull percentage, costs/spend, and the inventory
+ * of items carried aboard.
  */
 import expedition.engine.GameConfig;
 
@@ -11,6 +12,7 @@ public class Ship
     private int fuel; 
     private final int tankCapacity; 
     private int hullPercent; 
+    private final Inventory inventory; 
     
     public Ship(GameConfig c)
     {
@@ -20,6 +22,8 @@ public class Ship
         hullPercent = 100; 
         // fuel is set in GameConfig 
         fuel = c.startingFuel();  
+        // starts empty, items are found while drilling or given by hazards
+        inventory = new Inventory(c.inventorySlots()); 
     }
     
     public int fuel()
@@ -30,6 +34,11 @@ public class Ship
     public int hullPercent()
     {
         return hullPercent; 
+    }
+    
+    public Inventory inventory()
+    {
+        return inventory; 
     }
     
     // you want the add fuel to stop at the limit and waste anythig extra

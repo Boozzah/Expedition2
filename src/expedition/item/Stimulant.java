@@ -2,7 +2,6 @@
  * Stimulant
  * Item. Restores a crew member's stamina (Caffeine, White Monster,
  * etc — same class, different values).
- * TO BE IMPLEMENTED IN PROJECT 2
  */
 package expedition.item;
 

@@ -15,6 +15,7 @@ import expedition.ui.GameView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class HazardReport {
 
@@ -28,6 +29,7 @@ public class HazardReport {
     private final boolean[] alive;
     private final int fuelBefore;
     private final int hullBefore;
+    private final Map<String, Integer> itemsBefore;
 
     // make this right before outcome.applyAll() so the snapshot is the "before"
     public HazardReport(RunState state, GameView view) {
@@ -49,6 +51,8 @@ public class HazardReport {
         }
         fuelBefore = state.ship().fuel();
         hullBefore = state.ship().hullPercent();
+        // stacked() already makes a new map, so it won't change when the inventory does
+        itemsBefore = state.ship().inventory().stacked();
     }
 
     // Prints a line for each crew member who changed. Returns the members of the team
@@ -100,6 +104,41 @@ public class HazardReport {
         if (!ship.isEmpty()) {
             view.print("  " + ship);
         }
+        printItemChanges();
+    }
+
+    // compares the inventory by name, so it reads "found: Caffeine" rather than
+    // the player having to open the inventory to notice
+    private void printItemChanges() {
+        Map<String, Integer> itemsAfter = state.ship().inventory().stacked();
+        String found = "";
+        String lost = "";
+
+        for (Map.Entry<String, Integer> e : itemsAfter.entrySet()) {
+            int gained = e.getValue() - itemsBefore.getOrDefault(e.getKey(), 0);
+            if (gained > 0) {
+                found += itemName(found, e.getKey(), gained);
+            }
+        }
+        for (Map.Entry<String, Integer> e : itemsBefore.entrySet()) {
+            int gone = e.getValue() - itemsAfter.getOrDefault(e.getKey(), 0);
+            if (gone > 0) {
+                lost += itemName(lost, e.getKey(), gone);
+            }
+        }
+
+        if (!found.isEmpty()) {
+            view.print("  found: " + found);
+        }
+        if (!lost.isEmpty()) {
+            view.print("  lost: " + lost);
+        }
+    }
+
+    // "Caffeine" for one, "Caffeine x2" for more, with commas between
+    private String itemName(String soFar, String name, int count) {
+        String sep = soFar.isEmpty() ? "" : ", ";
+        return sep + name + (count > 1 ? " x" + count : "");
     }
 
     // changes numbers into readable text, and handles commas between items

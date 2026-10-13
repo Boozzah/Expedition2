@@ -14,6 +14,8 @@ import expedition.ship.Ship;
 import expedition.ui.GameView;
 import expedition.ui.MenuChoice;
 import expedition.world.Planet;
+import expedition.item.ItemMenu;
+import expedition.item.ItemTable;
 import expedition.io.GameDataSource;
 import expedition.exception.DataLoadException;
 import expedition.expedition.ExpeditionSelector;
@@ -87,7 +89,10 @@ public class GameEngine {
         // load hazards
         allHazards = data.loadHazards();
         
-        return new RunState(seed, ship, crew, planets, ROUTE_LENGTH, config);
+        // every item that can be found this run, used by drops and ITEM hazards
+        ItemTable items = new ItemTable(data.loadItems());
+        
+        return new RunState(seed, ship, crew, planets, ROUTE_LENGTH, config, items);
     }
     
     // The actual gameplay loop
@@ -108,18 +113,15 @@ public class GameEngine {
                     break;
                 }
             }
-            // calculate jump cost
-            int jumpCost = FuelEconomy.jumpCost(state.jumpNumber(), state.ship().hullPercent(), config);
-            
-            // cant afford jump cost
-            if (!state.ship().canAfford(jumpCost)) {
-                view.print("The ship doesn't have enough fuel for the next jump. You require: " + jumpCost + " fuel");
+            // cant afford jump cost, even after using any items that might help
+            if (!readyToJump(state)) {
                 state.endRun(EndingReason.ADRIFT);
                 break;
             }
-            // Only one real option exists at this stage
-            view.print(""); 
-            view.readChoice("Jump " + state.jumpNumber() + " costs " + jumpCost + " fuel. Ready to jump? Type: ", List.of("Jump"));
+            
+            // calculate jump cost. worked out after readyToJump because a Repair Kit used
+            // there lowers it
+            int jumpCost = FuelEconomy.jumpCost(state.jumpNumber(), state.ship().hullPercent(), config);
             
             // spend fuel
             state.ship().spendFuel(jumpCost);
@@ -134,6 +136,55 @@ public class GameEngine {
             }
         }
         reportEnding(state);
+    }
+    
+    // The jump prompt. The player can use items first (GDD 10: items can be used before a jump),
+    // which also matters when the ship is short on fuel - Condensed Oil or a Repair Kit might
+    // be enough to make the jump. Returns true to jump, false if the ship can't afford it
+    // and the player has nothing left to try, which leaves them adrift
+    private boolean readyToJump(RunState state) {
+        ItemMenu itemMenu = new ItemMenu(state, view);
+        
+        while (true) {
+            // worked out again each time round, using an item can change it
+            int jumpCost = FuelEconomy.jumpCost(state.jumpNumber(), state.ship().hullPercent(), config);
+            boolean canAfford = state.ship().canAfford(jumpCost);
+            boolean hasItems = !state.ship().inventory().isEmpty();
+            
+            view.print("");
+            if (!canAfford) {
+                view.print("The ship doesn't have enough fuel for the next jump. You require: " + jumpCost + " fuel");
+                if (!hasItems) {
+                    return false;
+                }
+            }
+            
+            List<String> options = new ArrayList<>();
+            if (canAfford) {
+                options.add("Jump");
+            }
+            if (hasItems) {
+                options.add("Use item");
+            }
+            // giving up is only an option when jumping isn't
+            if (!canAfford) {
+                options.add("Drift");
+            }
+            
+            String prompt = canAfford
+                    ? "Jump " + state.jumpNumber() + " costs " + jumpCost + " fuel. Ready to jump? Type: "
+                    : "Use an item, or drift? Type: ";
+            String choice = view.readChoice(prompt, options);
+            
+            if (choice.equals("Jump")) {
+                return true;
+            }
+            if (choice.equals("Drift")) {
+                return false;
+            }
+            // aboard the ship, so anyone alive can be given an item
+            itemMenu.open(null);
+        }
     }
     
     private void showInstructions()
@@ -284,7 +335,16 @@ public class GameEngine {
     private void reportStatus(RunState state) {
         view.print(""); 
         view.print("=== Jump " + state.jumpNumber() + " ===");
-        view.print("Fuel: " + state.ship().fuel() + " Hull: " + state.ship().hullPercent() + "%");
+
+        // the cost of leaving this planet, shown on arrival so the player knows how much
+        // oil they need before deciding whether to send anyone down
+        int fuel = state.ship().fuel();
+        int jumpCost = FuelEconomy.jumpCost(state.jumpNumber(), state.ship().hullPercent(), config);
+        String nextJump = "Next jump: " + jumpCost + " fuel";
+        if (fuel < jumpCost) {
+            nextJump += " (" + (jumpCost - fuel) + " short)";
+        }
+        view.print("Fuel: " + fuel + " Hull: " + state.ship().hullPercent() + "%   " + nextJump);
     }
     
     private void reportEnding(RunState state) {

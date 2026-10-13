@@ -1,0 +1,15 @@
+# data/items.txt
+# NAME|KIND|AMOUNT|BONUS|DROP_WEIGHT|DESCRIPTION
+#
+# KIND is MEDKIT (health), STIMULANT (stamina), COMFORT (composure),
+# REPAIR (hull %) or FUEL (fuel, ignores the tank cap).
+# BONUS is only used by STIMULANT for extra composure - leave it 0 for the rest.
+# DROP_WEIGHT is how often it is found compared to the others (GDD 5.5)
+# the Engineer doubles the Repair Kit's weight, so keep its name the same as Engineer.java
+
+Repair Kit|REPAIR|25|0|25|Patches and sealant. Restores 25% hull.
+Caffeine|STIMULANT|20|0|20|Ship-issue tablets. +20 stamina for one crew member.
+First Aid Kit|MEDKIT|40|0|20|Bandages, splints, painkillers. +40 health for one crew member.
+Sensory Toy|COMFORT|30|0|15|Something to keep the hands busy. +30 composure for one crew member.
+Condensed Oil|FUEL|60|0|12|A sealed canister of refined fuel. +60 fuel, even past a full tank.
+White Monster|STIMULANT|35|15|8|Nobody knows who keeps stocking these. +35 stamina and +15 composure for one crew member.

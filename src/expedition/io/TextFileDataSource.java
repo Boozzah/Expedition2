@@ -18,6 +18,8 @@ import expedition.hazard.HazardSet;
 import expedition.hazard.effect.Effect;
 import expedition.hazard.effect.EffectParser;
 import expedition.crew.CrewFactory;
+import expedition.item.ItemDefinition;
+import expedition.item.ItemKind;
 
 import java.io.BufferedReader;                                                        
 import java.io.FileReader;
@@ -34,6 +36,7 @@ public class TextFileDataSource implements GameDataSource {
     private static final String CREW_FILE = "data/crew.txt";
     private static final String PLANET_FILE = "data/planets.txt";
     private static final String HAZARD_FILE = "data/hazards.txt";
+    private static final String ITEM_FILE = "data/items.txt";
     
     // split() treats its arguement as a regex, and in a regex a | means or - it would split every character
     // two backslashes means escape it and its a literal pipe
@@ -224,6 +227,34 @@ public class TextFileDataSource implements GameDataSource {
         return hazards;
     } 
     
+    // --- items.txt: NAME|KIND|AMOUNT|BONUS|DROP_WEIGHT|DESCRIPTION ---
+    
+    // these are the item recipes, not the items themselves. ItemTable makes a new
+    // Item from one each time something is found
+    @Override
+    public List<ItemDefinition> loadItems() throws DataLoadException {
+        List<ItemDefinition> items = new ArrayList<>();
+        
+        // 6 is the number of fields an item line must have
+        for (Row row : readRows(ITEM_FILE, 6)) {
+            String name = row.fields()[0].trim();
+            ItemKind kind = itemKindFrom(row.fields()[1], ITEM_FILE, row.lineNumber());
+            int amount = number(row.fields()[2], ITEM_FILE, row.lineNumber());
+            int bonus = number(row.fields()[3], ITEM_FILE, row.lineNumber());
+            int dropWeight = number(row.fields()[4], ITEM_FILE, row.lineNumber());
+            String description = row.fields()[5].trim();
+            
+            // a negative weight would throw off the pick in ItemTable for every other item
+            // 0 is allowed, it just means the item never drops
+            if (dropWeight < 0) {
+                throw new DataLoadException(ITEM_FILE, row.lineNumber(), "drop weight can't be negative, found " + dropWeight);
+            }
+            
+            items.add(new ItemDefinition(name, kind, amount, bonus, dropWeight, description));
+        }
+        return items;
+    }
+    
     // Helper methods
     // each converts an unchecked exception into checked, so typos result in a file error rather than crash
     
@@ -266,6 +297,17 @@ public class TextFileDataSource implements GameDataSource {
           } catch (IllegalArgumentException e) {
               throw new DataLoadException(fileName, lineNumber,
                       "unknown hazard set \"" + text.trim() + "\"");
+          }
+      }
+      
+      // same as above, for item kind
+      private ItemKind itemKindFrom(String text, String fileName, int lineNumber)
+              throws DataLoadException {
+          try {
+              return ItemKind.valueOf(text.trim().toUpperCase());
+          } catch (IllegalArgumentException e) {
+              throw new DataLoadException(fileName, lineNumber,
+                      "unknown item kind \"" + text.trim() + "\"");
           }
       }
 }

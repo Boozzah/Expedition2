@@ -11,6 +11,7 @@ import expedition.crew.CrewMember;
 import expedition.exception.DataLoadException;
 import expedition.world.Planet;
 import expedition.hazard.Hazard;
+import expedition.item.ItemDefinition;
 
 import java.util.List;
 
@@ -18,5 +19,6 @@ public interface GameDataSource {
     List<CrewMember> loadCrew() throws DataLoadException;
     List<Planet> loadPlanets() throws DataLoadException;
     List<Hazard> loadHazards() throws DataLoadException;
+    List<ItemDefinition> loadItems() throws DataLoadException;
     
 }

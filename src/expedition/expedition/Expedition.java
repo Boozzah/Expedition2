@@ -78,8 +78,7 @@ public class Expedition {
     /* ---- ability lookups -------
     * One method per hook interface. Each returns only the living, non fatigued members that
     * implement it so no calling method has to remember to check. An empty list means nobody
-    * aboard has that ability. - the Miner, Geologist and Doctor are wired in, the rest are
-    * still to come in project 2
+    * aboard has that ability.
     */
     
     public List<DrillModifier> drillModifiers() { return withAbility(DrillModifier.class);}
