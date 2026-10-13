@@ -3,7 +3,7 @@
  * Runs one trip down a DrillSite: the drill/ascend/use-item loop,
  * yield accumulation, item drops and hazard rolls. The core gameplay
  * loop everything else exists to support.
- * The Miner, Geologist and Doctor abilities all fire in here.
+ * The Miner, Geologist, Doctor, Surveyor and Engineer abilities all fire in here.
  */
 package expedition.expedition;
 
@@ -13,15 +13,19 @@ import expedition.engine.GameConfig;
 import expedition.ui.GameView;
 import expedition.crew.hooks.DrillModifier;
 import expedition.crew.hooks.FieldMedic;
+import expedition.crew.hooks.ItemFinder;
 import expedition.crew.hooks.VeinInsight;
 import expedition.hazard.Hazard;
 import expedition.hazard.HazardOutcome; 
 import expedition.hazard.SeverityRoller; 
 import expedition.hazard.effect.EffectContext; 
+import expedition.item.Item;
+import expedition.ship.Inventory;
 import expedition.ship.FuelEconomy;
 import expedition.crew.CrewMember;
 import expedition.util.TextWrapper; 
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class DrillSession implements HaulHolder
@@ -132,6 +136,10 @@ public class DrillSession implements HaulHolder
         
         view.print("Level " + depth + ": " + yield + " oil.");
         
+        // rolled on every level, even empty ones - GDD 5.4 says the drop is independent of
+        // the yield, so finding an item doesnt tell the player anything about the vein
+        rollItemDrop();
+        
         // calls the method that rolls a potentional hazard each time youve drilled a level
         rollHazard(depth); 
     }
@@ -168,6 +176,73 @@ public class DrillSession implements HaulHolder
     }
     
     
+    // the chance of an item on each level. Starts at ITEM_DROP_BASE and each crew member
+    // with an ItemFinder ability can change it (the Surveyor adds 7%). itemFinders() already
+    // leaves out anyone fatigued, so a tired Surveyor doesnt help
+    private double itemDropChance()
+    {
+        double chance = config.itemDropBase() / 100.0;
+        for (ItemFinder finder : team.itemFinders())
+        {
+            chance = finder.modifyDropChance(chance);
+        }
+        return chance;
+    }
+    
+    // the Surveyor and Engineer abilities. The Surveyor changes the chance of finding
+    // something at all, the Engineer changes which item it is (more Repair Kits)
+    private void rollItemDrop()
+    {
+        if (state.rng().nextDouble() >= itemDropChance())
+        {
+            return;
+        }
+        
+        Item item = state.itemTable().roll(state.rng(), team.itemFinders());
+        if (item == null)
+        {
+            return;
+        }
+        
+        view.print("  Found: " + item.name() + " - " + item.description());
+        
+        Inventory bag = state.ship().inventory();
+        if (!bag.add(item))
+        {
+            makeRoomFor(item, bag);
+        }
+    }
+    
+    // GDD 10: a full hold turns finding an item into a choice - leave it, or throw
+    // something out for it. Numbered like the drill menu so it works in the window too
+    private void makeRoomFor(Item item, Inventory bag)
+    {
+        view.print("  The hold is full (" + bag.capacity() + " items).");
+        view.print("  1) Leave the " + item.name() + " behind");
+        
+        // one option per kind of item rather than per item, so 3 Caffeine is one line
+        List<String> names = new ArrayList<>(bag.stacked().keySet());
+        for (int i = 0; i < names.size(); i++)
+        {
+            String name = names.get(i);
+            view.print("  " + (i + 2) + ") Throw out one " + name + " (have " + bag.stacked().get(name) + ")");
+        }
+        
+        int choice = view.readInt("Choose an option: ", 1, names.size() + 1);
+        
+        // 1 and Back both leave the new item, so nothing is thrown away by accident
+        if (choice < 2)
+        {
+            view.print("  The " + item.name() + " is left behind.");
+            return;
+        }
+        
+        String thrownOut = names.get(choice - 2);
+        bag.take(thrownOut);
+        bag.add(item);
+        view.print("  Threw out one " + thrownOut + " to make room for the " + item.name() + ".");
+    }
+    
     // important for hazards as you may have loss 40% of oil, and this calculates that
     @Override
     public void reduceHaulByPercent(int percent)
@@ -194,10 +269,12 @@ public class DrillSession implements HaulHolder
         int space = Math.max(0, capacity - fuel - oilAboard);
         int jumpCost = FuelEconomy.jumpCost(state.jumpNumber(), state.ship().hullPercent(), config);
         int hazardPct = (int) Math.round(site.tier().hazardChance(nextLevel) * 100);
+        int itemPct = (int) Math.round(itemDropChance() * 100);
 
         view.print("");
         view.print("Next Level: " + nextLevel + "   Current haul: " + haul + " oil"
-                + "   Hazard next level: " + hazardPct + "%");
+                + "   Hazard next level: " + hazardPct + "%"
+                + "   Item chance: " + itemPct + "%");
 
         String tank = "Tank: " + fuel + "/" + capacity;
         if (oilAboard > 0) {

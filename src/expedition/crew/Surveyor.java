@@ -1,7 +1,7 @@
 /*
  * Surveyor
  * Crew role. Implements ItemFinder — improves the chance of finding
- * an item while drilling. - net yet implemented - part of project 2
+ * an item while drilling.
  */
 package expedition.crew;
 

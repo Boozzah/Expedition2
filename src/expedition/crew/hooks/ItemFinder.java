@@ -1,7 +1,7 @@
 /*
  * ItemFinder
  * Hook implemented by crew who change item drop chance or item
- * weighting (Surveyor, Engineer). Not wired in for project 1, part of project 2
+ * weighting (Surveyor, Engineer). Used by DrillSession when it rolls for an item.
  */
 package expedition.crew.hooks;
 

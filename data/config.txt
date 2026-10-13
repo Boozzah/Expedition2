@@ -31,6 +31,8 @@ ASCENT_TRIGGER_PER_EXTRA_TRIP=8
 # ---- Items ----
 # how many items the ship can carry
 INVENTORY_SLOTS=8
+# percent chance of finding an item on each drill level (the Surveyor adds 7 more)
+ITEM_DROP_BASE=8
 
 # ---------------------------------------------------------------------------
 # NOT YET WIRED UP. These are in GDD but GameConfig doesn't read them yet,
@@ -49,7 +51,6 @@ INVENTORY_SLOTS=8
 #   HEALTH_MIN_ELIGIBLE         30    (hardcoded in CrewMember.isEligible)
 #   COMPOSURE_MIN_ELIGIBLE      25    (hardcoded in CrewMember.isEligible)
 #   COMPOSURE_SHAKEN_THRESHOLD  40    (not implemented)
-#   ITEM_DROP_BASE              8%    (not implemented)
 #   ITEM_DROP_SURVEYOR_BONUS    7%    (hardcoded in Surveyor)
 #   JUMP_EVENT_CHANCE           60%   (not implemented)
 #   EMPTY_LEVELS_BEFORE_CLOSE   2     (DrillSession, in progress)
