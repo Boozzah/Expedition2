@@ -335,7 +335,16 @@ public class GameEngine {
     private void reportStatus(RunState state) {
         view.print(""); 
         view.print("=== Jump " + state.jumpNumber() + " ===");
-        view.print("Fuel: " + state.ship().fuel() + " Hull: " + state.ship().hullPercent() + "%");
+
+        // the cost of leaving this planet, shown on arrival so the player knows how much
+        // oil they need before deciding whether to send anyone down
+        int fuel = state.ship().fuel();
+        int jumpCost = FuelEconomy.jumpCost(state.jumpNumber(), state.ship().hullPercent(), config);
+        String nextJump = "Next jump: " + jumpCost + " fuel";
+        if (fuel < jumpCost) {
+            nextJump += " (" + (jumpCost - fuel) + " short)";
+        }
+        view.print("Fuel: " + fuel + " Hull: " + state.ship().hullPercent() + "%   " + nextJump);
     }
     
     private void reportEnding(RunState state) {
