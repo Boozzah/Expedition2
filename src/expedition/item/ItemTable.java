@@ -59,6 +59,17 @@ public class ItemTable {
         return null; // never reached, pick is always below total
     }
 
+    // builds the item with this name, for putting a saved inventory back together.
+    // returns null if no item has that name any more
+    public Item create(String name) {
+        for (ItemDefinition d : definitions) {
+            if (d.name().equals(name)) {
+                return ItemFactory.create(d);
+            }
+        }
+        return null;
+    }
+
     public List<ItemDefinition> definitions() {
         return Collections.unmodifiableList(definitions);
     }

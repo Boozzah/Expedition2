@@ -23,9 +23,18 @@ public class Ship
         // fuel is set in GameConfig 
         fuel = c.startingFuel();  
         // starts empty, items are found while drilling or given by hazards
-        inventory = new Inventory(c.inventorySlots()); 
+        inventory = new Inventory(c.inventorySlots());
     }
-    
+
+    // for resuming a saved run, the fuel and hull carry on from where they were.
+    // the items are added to the inventory afterwards
+    public Ship(GameConfig c, int fuel, int hullPercent)
+    {
+        this(c);
+        this.fuel = fuel;
+        this.hullPercent = hullPercent;
+    }
+
     public int fuel()
     {
         return fuel; 
