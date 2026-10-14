@@ -18,6 +18,8 @@ import expedition.item.ItemMenu;
 import expedition.item.ItemTable;
 import expedition.io.GameDataSource;
 import expedition.exception.DataLoadException;
+import expedition.exception.SaveException;
+import expedition.io.SaveStore;
 import expedition.expedition.ExpeditionSelector;
 import expedition.expedition.Expedition;
 import expedition.world.DrillSite;
@@ -41,17 +43,19 @@ public class GameEngine {
     private final GameDataSource data;
     private final ExpeditionSelector selector;
     private final RunLogWriter log;
+    private final SaveStore saves;
     private List<Hazard> allHazards = List.of();
     private final Long fixedSeed;
     
     public GameEngine(GameView view, GameConfig config, 
                       GameDataSource data, ExpeditionSelector selector, 
-                      RunLogWriter log, Long fixedSeed) {
+                      RunLogWriter log, SaveStore saves, Long fixedSeed) {
         this.view = view;
         this.config = config;
         this.data = data;
         this.selector = selector;
         this.log = log;
+        this.saves = saves;
         this.fixedSeed = fixedSeed;
     }
     
@@ -63,9 +67,19 @@ public class GameEngine {
         boolean playing = true;
         while(playing) {
             // main menu
-            MenuChoice choice = view.showMainMenu();
+            MenuChoice choice = view.showMainMenu(hasSave());
             switch(choice) {
-                case NEW_GAME: playRun(startNewRun()); break;
+                case NEW_GAME:
+                    if (confirmNewRun()) {
+                        playRun(startNewRun());
+                    }
+                    break;
+                case RESUME:
+                    RunState resumed = resumeRun();
+                    if (resumed != null) {
+                        playRun(resumed);
+                    }
+                    break;
                 case HOW_TO_PLAY: showInstructions(); break;
                 case QUIT: playing = false; break;
             }
@@ -95,11 +109,77 @@ public class GameEngine {
         return new RunState(seed, ship, crew, planets, ROUTE_LENGTH, config, items);
     }
     
+    // There is only one save, so a new run will write over it at the first planet.
+    // Checks first rather than losing someone's run without warning
+    private boolean confirmNewRun() {
+        if (!hasSave()) {
+            return true;
+        }
+        return view.readYesNo("Starting a new run will replace your saved run. Carry on?");
+    }
+    
+    // Builds the run back up from the autosave. The content is loaded fresh the same way
+    // a new run does it, then the save says which planets, crew stats and items to use.
+    // Returns null (back to the menu) if there is no save or it can't be used
+    private RunState resumeRun() throws DataLoadException {
+        try {
+            SavedRun saved = saves.load();
+            if (saved == null) {
+                view.print("There is no saved run to resume.");
+                return null;
+            }
+            
+            allHazards = data.loadHazards();
+            ItemTable items = new ItemTable(data.loadItems());
+            RunState state = RunState.restore(saved, data.loadPlanets(), items, config);
+            
+            log.resumeRun(saved.seed());
+            view.print("");
+            view.print("Resuming your run.");
+            return state;
+        } catch (SaveException e) {
+            view.print("Your saved run could not be loaded: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    // a save that can't be checked is treated as no save, the game still plays without one
+    private boolean hasSave() {
+        try {
+            return saves.hasSave();
+        } catch (SaveException e) {
+            view.print("Saved runs aren't available: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    // Saves the run each time the ship arrives at a planet (GDD P2 4: autosave at each planet).
+    // checkpoint() runs even if the save fails, so the run's rolls stay the same either way
+    private void autosave(RunState state) {
+        SavedRun snapshot = state.checkpoint();
+        try {
+            saves.save(snapshot);
+            view.print("Run saved.");
+        } catch (SaveException e) {
+            view.print("The run could not be saved: " + e.getMessage());
+        }
+    }
+    
+    // once a run is over there is nothing left to resume
+    private void deleteSave() {
+        try {
+            saves.delete();
+        } catch (SaveException e) {
+            view.print("The finished run's save could not be removed: " + e.getMessage());
+        }
+    }
+    
     // The actual gameplay loop
     private void playRun(RunState state) {
         // while run is not over, do the gameplay loop
         while (!state.isRunOver()) {
             reportStatus(state);
+            autosave(state);
             
             // set the current planet and initialise team
             Planet planet = state.currentPlanet();
@@ -136,6 +216,7 @@ public class GameEngine {
             }
         }
         reportEnding(state);
+        deleteSave();
     }
     
     // The jump prompt. The player can use items first (GDD 10: items can be used before a jump),

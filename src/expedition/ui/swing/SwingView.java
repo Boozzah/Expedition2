@@ -74,6 +74,10 @@ public class SwingView implements GameView {
     // a menu click only counts when the engine is actually asking for one
     private boolean menuWaiting = false;
 
+    // Only touched on the EDT. Whether there is a saved run for Load Game to resume,
+    // set each time the menu is shown
+    private boolean canResume = false;
+
     // builds the window before returning, so the engine can print to it straight away
     public SwingView() {
         try {
@@ -132,7 +136,7 @@ public class SwingView implements GameView {
     }
 
     @Override
-    public MenuChoice showMainMenu() throws QuitGameException {
+    public MenuChoice showMainMenu(boolean canResume) throws QuitGameException {
         checkNotEdt();
 
         // How to Play and the ending of a run both print their text and then go straight
@@ -148,6 +152,7 @@ public class SwingView implements GameView {
             // a fresh screen for whatever comes after the menu
             text.clear();
             cards.show(screens, MENU_SCREEN);
+            this.canResume = canResume;
             menuWaiting = true;
         });
         return (MenuChoice) waitForAnswer();
@@ -241,7 +246,7 @@ public class SwingView implements GameView {
             case HOW_TO_PLAY:
             case HELP: answerMenu(MenuChoice.HOW_TO_PLAY); break;
             case QUIT: answerMenu(MenuChoice.QUIT); break;
-            case LOAD_GAME: comingSoon("Load Game"); break;
+            case LOAD_GAME: loadGameClicked(); break;
             case SETTINGS: comingSoon("Settings"); break;
             case HIGH_SCORES: comingSoon("High Scores"); break;
         }
@@ -251,6 +256,17 @@ public class SwingView implements GameView {
     private void answerMenu(MenuChoice choice) {
         menuWaiting = false;
         answers.offer(choice);
+    }
+
+    // The game autosaves at every planet, so Load Game just resumes that save.
+    // With no save there is nothing to load, so the player stays on the menu
+    private void loadGameClicked() {
+        if (canResume) {
+            answerMenu(MenuChoice.RESUME);
+        } else {
+            JOptionPane.showMessageDialog(frame, "There is no saved run yet. The game saves itself each time the ship reaches a planet.",
+                    "Load Game", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
     // the engine isn't asked anything, the player just stays on the menu
