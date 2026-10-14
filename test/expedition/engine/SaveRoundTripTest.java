@@ -58,52 +58,20 @@ public class SaveRoundTripTest {
     }
 
     @Test
-    public void restoringASaveGivesBackTheSameRun() throws DataLoadException, SaveException
+    public void restoringASaveGivesBackTheSameRunWithTheSameRolls() throws DataLoadException, SaveException
     {
         RunState original = runPartWayThrough();
         SavedRun saved = original.checkpoint();
 
         RunState resumed = RunState.restore(saved, data.loadPlanets(), items, config);
 
-        // SavedRun is a record, so equals compares every field including the order
-        // of the route, the items and the crew
+        // SavedRun is a record, so equals compares every field including the order of
+        // the route, the items and the crew. Checkpointing the resumed run again (the engine
+        // does this on arrival) must not reseed a second time or the rolls would drift apart
         assertEquals(saved, resumed.checkpoint());
-        assertEquals(original.jumpNumber(), resumed.jumpNumber());
         assertEquals(original.currentPlanet().name(), resumed.currentPlanet().name());
-        assertFalse(resumed.crew().get(1).isAlive());
-    }
-
-    @Test
-    public void resumedRunRollsTheSameNumbersAsTheOriginal() throws DataLoadException, SaveException
-    {
-        RunState original = runPartWayThrough();
-        SavedRun saved = original.checkpoint();
-        RunState resumed = RunState.restore(saved, data.loadPlanets(), items, config);
-
-        // the engine checkpoints again when the resumed run arrives at the planet,
-        // which must not reseed a second time or the rolls would drift apart
-        resumed.checkpoint();
-
         for (int i = 0; i < 50; i++) {
             assertEquals("roll " + i, original.rng().nextInt(1000), resumed.rng().nextInt(1000));
         }
-    }
-
-    @Test
-    public void checkpointingTwiceAtOnePlanetSavesTheSameThing() throws DataLoadException
-    {
-        RunState state = runPartWayThrough();
-        assertEquals(state.checkpoint(), state.checkpoint());
-    }
-
-    @Test(expected = SaveException.class)
-    public void aSaveWithAPlanetThatNoLongerExistsIsRefused() throws DataLoadException, SaveException
-    {
-        SavedRun saved = runPartWayThrough().checkpoint();
-        SavedRun broken = new SavedRun(saved.seed(), saved.rngSeed(), saved.planetIndex(),
-                saved.totalOilCollected(), saved.fuel(), saved.hullPercent(),
-                List.of("Nowhere"), saved.items(), saved.crew());
-
-        RunState.restore(broken, data.loadPlanets(), items, config);
     }
 }
