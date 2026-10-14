@@ -32,6 +32,10 @@ public class DatabaseInitialiser {
             createIfAbsent("HAZARDS", Schema.HAZARDS);
             createIfAbsent("HAZARD_OUTCOMES", Schema.HAZARD_OUTCOMES);
             createIfAbsent("ITEMS", Schema.ITEMS);
+            // SAVED_CREW has a FK to SAVED_RUN, so it has to come second. Both start empty,
+            // the first autosave fills them
+            createIfAbsent("SAVED_RUN", Schema.SAVED_RUN);
+            createIfAbsent("SAVED_CREW", Schema.SAVED_CREW);
             
             
             // first run only - once the crew are in, the table is never emptied
