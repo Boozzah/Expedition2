@@ -1,8 +1,8 @@
 /*
  * SaveException
- * Thrown when a saved run can't be written, read or deleted, or when the save is
- * there but can't be turned back into a run (e.g. a planet in it no longer exists).
- * The game carries on without the save rather than stopping.
+ * Thrown when a saved run or a high score can't be written, read or deleted, or when
+ * the save is there but can't be turned back into a run (e.g. a planet in it no longer
+ * exists). The game carries on without it rather than stopping.
 */
 package expedition.exception;
 
