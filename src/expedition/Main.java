@@ -18,6 +18,7 @@ import expedition.exception.DatabaseException;
 
 import expedition.io.db.DerbyDataSource;
 import expedition.io.db.DerbySaveStore;
+import expedition.io.db.DerbyScoreStore;
 import expedition.io.db.DBManager;
 
 public class Main {
@@ -56,8 +57,9 @@ public class Main {
         Long fixedSeed = parseSeed(args, view);
         
         // Main Game engine
-        // the autosave, kept in the database next to the game content
-        GameEngine engine = new GameEngine(view, config, data, selector, log, new DerbySaveStore(), fixedSeed);
+        // the autosave and the high scores, kept in the database next to the game content
+        GameEngine engine = new GameEngine(view, config, data, selector, log,
+                new DerbySaveStore(), new DerbyScoreStore(), fixedSeed);
     
         
         try {
