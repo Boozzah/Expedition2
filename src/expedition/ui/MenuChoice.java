@@ -11,5 +11,6 @@ public enum MenuChoice {
     NEW_GAME,
     RESUME,
     HOW_TO_PLAY,
+    HIGH_SCORES,
     QUIT
 }

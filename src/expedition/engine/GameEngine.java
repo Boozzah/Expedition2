@@ -40,6 +40,9 @@ public class GameEngine {
     // 8 planets in a run
     private static final int ROUTE_LENGTH = 8;
     
+    // how many runs the high-score screen lists, as many as fit on Nadia's screen
+    private static final int HIGH_SCORES_SHOWN = 8;
+    
     private final GameView view;
     private final GameConfig config;
     private final GameDataSource data;
@@ -85,6 +88,7 @@ public class GameEngine {
                     }
                     break;
                 case HOW_TO_PLAY: showInstructions(); break;
+                case HIGH_SCORES: showHighScores(); break;
                 case QUIT: playing = false; break;
             }
         }
@@ -166,6 +170,14 @@ public class GameEngine {
             view.print("Run saved.");
         } catch (SaveException e) {
             view.print("The run could not be saved: " + e.getMessage());
+        }
+    }
+    
+    private void showHighScores() {
+        try {
+            view.showHighScores(scores.top(HIGH_SCORES_SHOWN));
+        } catch (SaveException e) {
+            view.print("The high scores could not be read: " + e.getMessage());
         }
     }
     

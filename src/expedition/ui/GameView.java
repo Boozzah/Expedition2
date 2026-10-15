@@ -7,6 +7,7 @@
 */
 package expedition.ui;
 
+import expedition.engine.HighScore;
 import expedition.exception.QuitGameException;
 import java.util.List;
 
@@ -23,6 +24,10 @@ public interface GameView {
     // prints the text menu, the window shows menu screen. canResume is false when
     // there is no saved run, so Resume can't be picked
     MenuChoice showMainMenu(boolean canResume) throws QuitGameException;
+
+    // Shows the best finished runs, best first. The window waits for Back, the console
+    // just prints the table and carries on to the menu
+    void showHighScores(List<HighScore> scores) throws QuitGameException;
 
     // Called once when the program is finished, so a window can close itself
     void close();
