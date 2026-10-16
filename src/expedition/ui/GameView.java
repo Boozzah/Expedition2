@@ -20,8 +20,9 @@ public interface GameView {
     boolean readYesNo(String prompt) throws QuitGameException;
 
     // Shows the main menu and waits for the player to pick something. The console
-    // prints the text menu, the window shows menu screen
-    MenuChoice showMainMenu() throws QuitGameException;
+    // prints the text menu, the window shows menu screen. canResume is false when
+    // there is no saved run, so Resume can't be picked
+    MenuChoice showMainMenu(boolean canResume) throws QuitGameException;
 
     // Called once when the program is finished, so a window can close itself
     void close();

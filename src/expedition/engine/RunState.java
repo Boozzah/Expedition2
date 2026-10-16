@@ -1,6 +1,9 @@
 package expedition.engine;
 
+import expedition.crew.CrewFactory;
 import expedition.crew.CrewMember;
+import expedition.exception.SaveException;
+import expedition.item.Item;
 import expedition.world.Planet;
 import expedition.ship.Ship;
 import expedition.expedition.Expedition;
@@ -30,6 +33,11 @@ public class RunState  {
     private Ending ending = null;
     private int totalOilCollected = 0;
     
+    // what rng was last reseeded with by checkpoint(), and at which planet. -1 means
+    // there hasn't been a checkpoint yet
+    private long rngSeed;
+    private int checkpointIndex = -1;
+    
     public RunState(long seed, Ship ship, List<CrewMember> crew, List<Planet> planetPool, int planetsPerRun, GameConfig config, ItemTable itemTable) {
         this.seed = seed;
         this.rng = new Random(seed);
@@ -46,6 +54,95 @@ public class RunState  {
         
         int count = Math.min(planetsPerRun, pool.size()); // guards a short planets.txt
         this.route = new ArrayList<>(pool.subList(0, count));
+    }
+    
+    // for restore() - the route is already drawn, so nothing is shuffled here
+    private RunState(SavedRun saved, Ship ship, List<CrewMember> crew, List<Planet> route, GameConfig config, ItemTable itemTable) {
+        this.seed = saved.seed();
+        this.rng = new Random(saved.rngSeed());
+        this.ship = ship;
+        this.crew = crew;
+        this.route = route;
+        this.config = config;
+        this.itemTable = itemTable;
+        this.planetIndex = saved.planetIndex();
+        this.totalOilCollected = saved.totalOilCollected();
+        
+        // the save was taken at this planet's checkpoint, so checkpoint() mustn't reseed again here
+        this.rngSeed = saved.rngSeed();
+        this.checkpointIndex = saved.planetIndex();
+    }
+    
+    // --- saving and resuming ---
+    
+    // Takes a snapshot of the run for the autosave on arriving at a planet.
+    // java.util.Random can't hand back where it is up to, so instead rng is reseeded with a
+    // number drawn from itself and that number is saved. A resumed run starts a new Random
+    // from it, so it rolls the same numbers as a run that never stopped.
+    // Only reseeds once per planet, so calling it again at the same planet changes nothing
+    public SavedRun checkpoint() {
+        if (checkpointIndex != planetIndex) {
+            rngSeed = rng.nextLong();
+            rng.setSeed(rngSeed);
+            checkpointIndex = planetIndex;
+        }
+        
+        List<String> routeNames = new ArrayList<>();
+        for (Planet p : route) {
+            routeNames.add(p.name());
+        }
+        
+        List<String> itemNames = new ArrayList<>();
+        for (Item item : ship.inventory().items()) {
+            itemNames.add(item.name());
+        }
+        
+        List<SavedRun.SavedCrew> savedCrew = new ArrayList<>();
+        for (CrewMember m : crew) {
+            savedCrew.add(new SavedRun.SavedCrew(m.getName(), m.getRole(),
+                    m.getHealth(), m.getStamina(), m.getComposure(), m.isAlive()));
+        }
+        
+        return new SavedRun(seed, rngSeed, planetIndex, totalOilCollected,
+                ship.fuel(), ship.hullPercent(), routeNames, itemNames, savedCrew);
+    }
+    
+    // Builds a run back up from a save. The planets and items come from the game content
+    // and are matched by name, so a save fails to load if one was removed since it was made
+    public static RunState restore(SavedRun saved, List<Planet> planetPool, ItemTable itemTable, GameConfig config) throws SaveException {
+        List<Planet> route = new ArrayList<>();
+        for (String name : saved.route()) {
+            route.add(findPlanet(planetPool, name));
+        }
+        
+        Ship ship = new Ship(config, saved.fuel(), saved.hullPercent());
+        for (String name : saved.items()) {
+            Item item = itemTable.create(name);
+            if (item == null) {
+                throw new SaveException("the saved item '" + name + "' is no longer in the game");
+            }
+            ship.inventory().add(item);
+        }
+        
+        List<CrewMember> crew = new ArrayList<>();
+        for (SavedRun.SavedCrew c : saved.crew()) {
+            CrewMember member = CrewFactory.create(c.role(), c.name(), c.health(), c.stamina(), c.composure());
+            if (!c.alive()) {
+                member.die();
+            }
+            crew.add(member);
+        }
+        
+        return new RunState(saved, ship, crew, route, config, itemTable);
+    }
+    
+    private static Planet findPlanet(List<Planet> pool, String name) throws SaveException {
+        for (Planet p : pool) {
+            if (p.name().equals(name)) {
+                return p;
+            }
+        }
+        throw new SaveException("the saved planet '" + name + "' is no longer in the game");
     }
     
     

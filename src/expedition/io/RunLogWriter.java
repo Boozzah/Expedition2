@@ -35,6 +35,14 @@ public class RunLogWriter {
                 "");
     }
     
+    // A resumed run carries on the log it already has instead of starting a new one
+    public void resumeRun(long seed) {
+        write(LOG_FILE, true,
+                "",
+                "Resumed " + timestamp() + " (run seed: " + seed + ")",
+                "");
+    }
+    
     // one line of the log, append as run happens
     public void log(String line) {
         write(LOG_FILE, true, line);

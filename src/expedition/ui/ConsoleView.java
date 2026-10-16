@@ -10,6 +10,7 @@ package expedition.ui;
 import expedition.exception.QuitGameException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ConsoleView implements GameView {
@@ -43,12 +44,22 @@ public class ConsoleView implements GameView {
     }
 
     // The same text menu the console has always had, the typed answer is just
-    // turned into a MenuChoice before it goes back to the engine
+    // turned into a MenuChoice before it goes back to the engine.
+    // Resume is only listed when there is a saved run to resume
     @Override
-    public MenuChoice showMainMenu() throws QuitGameException {
-        String choice = input.readChoice("--- MAIN MENU ---", List.of("New Game (n)", "How to Play (h)", "Quit (q)"));
+    public MenuChoice showMainMenu(boolean canResume) throws QuitGameException {
+        List<String> options = new ArrayList<>();
+        options.add("New Game (n)");
+        if (canResume) {
+            options.add("Resume (r)");
+        }
+        options.add("How to Play (h)");
+        options.add("Quit (q)");
+        
+        String choice = input.readChoice("--- MAIN MENU ---", options);
         switch (choice) {
             case "New Game (n)": return MenuChoice.NEW_GAME;
+            case "Resume (r)": return MenuChoice.RESUME;
             case "How to Play (h)": return MenuChoice.HOW_TO_PLAY;
             default: return MenuChoice.QUIT;
         }

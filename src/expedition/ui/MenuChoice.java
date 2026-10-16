@@ -9,6 +9,7 @@ package expedition.ui;
 
 public enum MenuChoice {
     NEW_GAME,
+    RESUME,
     HOW_TO_PLAY,
     QUIT
 }
