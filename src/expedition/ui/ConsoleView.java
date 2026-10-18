@@ -7,6 +7,7 @@
  */
 package expedition.ui;
 
+import expedition.engine.HighScore;
 import expedition.exception.QuitGameException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -54,6 +55,8 @@ public class ConsoleView implements GameView {
             options.add("Resume (r)");
         }
         options.add("How to Play (h)");
+        // not "High Scores", it would start with h like How to Play and typing h would match both
+        options.add("Scores (s)");
         options.add("Quit (q)");
         
         String choice = input.readChoice("--- MAIN MENU ---", options);
@@ -61,7 +64,24 @@ public class ConsoleView implements GameView {
             case "New Game (n)": return MenuChoice.NEW_GAME;
             case "Resume (r)": return MenuChoice.RESUME;
             case "How to Play (h)": return MenuChoice.HOW_TO_PLAY;
+            case "Scores (s)": return MenuChoice.HIGH_SCORES;
             default: return MenuChoice.QUIT;
+        }
+    }
+
+    // a plain table, %-16s pads a column out to 16 characters so the next one lines up
+    @Override
+    public void showHighScores(List<HighScore> scores) {
+        ui.print("");
+        ui.print("--- HIGH SCORES ---");
+        if (scores.isEmpty()) {
+            ui.print("No finished runs yet.");
+            return;
+        }
+        ui.print(String.format(" %-3s %-16s %-19s %-8s %s", "#", "Date", "Ending", "Planets", "Score"));
+        for (int i = 0; i < scores.size(); i++) {
+            HighScore s = scores.get(i);
+            ui.print(String.format(" %-3d %-16s %-19s %-8d %d", i + 1, s.when(), s.ending(), s.planetsReached(), s.score()));
         }
     }
 

@@ -92,6 +92,18 @@ final class Schema {
             + "ALIVE BOOLEAN NOT NULL, "
             + "PRIMARY KEY (SLOT, POSITION))";
     
+    // Every finished run, for the high-score screen. Rows are only ever added
+    static final String SCORES = 
+            "CREATE TABLE SCORES ("
+            + "ID INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, "
+            + "PLAYED_AT TIMESTAMP NOT NULL, "
+            + "ENDING VARCHAR(20) NOT NULL, "
+            + "PLANETS INTEGER NOT NULL, "
+            + "OIL INTEGER NOT NULL, "
+            + "SURVIVORS INTEGER NOT NULL, "
+            + "LOST INTEGER NOT NULL, "
+            + "SCORE INTEGER NOT NULL)";
+    
     private Schema() {
     }
 }

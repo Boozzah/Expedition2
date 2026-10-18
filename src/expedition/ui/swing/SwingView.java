@@ -1,8 +1,9 @@
 /*
  * SwingView
  *
- * The window version of GameView. The window has two screens and swaps between them:
+ * The window version of GameView. The window has three screens and swaps between them:
  * - the main menu, Nadia's MainMenuPanel
+ * - the high scores, HighScoresPanel
  * - the text screen, TextPanel, for every part of the game that has no screen of its own yet
  *
  * How the threads work, every method in here follows these rules:
@@ -25,6 +26,7 @@
  */
 package expedition.ui.swing;
 
+import expedition.engine.HighScore;
 import expedition.exception.QuitGameException;
 import expedition.ui.GameView;
 import expedition.ui.MenuChoice;
@@ -44,8 +46,9 @@ import javax.swing.SwingUtilities;
 
 public class SwingView implements GameView {
 
-    // names of the two screens in the CardLayout
+    // names of the screens in the CardLayout
     private static final String MENU_SCREEN = "menu";
+    private static final String SCORES_SCREEN = "scores";
     private static final String TEXT_SCREEN = "text";
 
     // put in the queue when the window is closed, instead of a real answer
@@ -53,6 +56,9 @@ public class SwingView implements GameView {
 
     // the answer from the Continue button, see showMainMenu
     private static final Object CONTINUE = new Object();
+
+    // the answer from the Back button on the high-score screen
+    private static final Object BACK_TO_MENU = new Object();
 
     // readInt gets one button per number up to this many, more than that gets a spinner
     private static final int MAX_NUMBER_BUTTONS = 10;
@@ -69,10 +75,15 @@ public class SwingView implements GameView {
     private CardLayout cards;
     private JPanel screens;
     private TextPanel text;
+    private HighScoresPanel highScores;
 
     // Only touched on the EDT. True while the engine is waiting on the main menu, so
     // a menu click only counts when the engine is actually asking for one
     private boolean menuWaiting = false;
+
+    // Only touched on the EDT. Same idea for the Back button on the high-score screen,
+    // so a double click can't leave a second Back in the queue for the menu to read
+    private boolean scoresWaiting = false;
 
     // Only touched on the EDT. Whether there is a saved run for Load Game to resume,
     // set each time the menu is shown
@@ -158,6 +169,18 @@ public class SwingView implements GameView {
         return (MenuChoice) waitForAnswer();
     }
 
+    // shows the scores screen and waits until the player clicks Back
+    @Override
+    public void showHighScores(List<HighScore> scores) throws QuitGameException {
+        checkNotEdt();
+        SwingUtilities.invokeLater(() -> {
+            highScores.showScores(scores);
+            cards.show(screens, SCORES_SCREEN);
+            scoresWaiting = true;
+        });
+        waitForAnswer();
+    }
+
     @Override
     public void close() {
         SwingUtilities.invokeLater(() -> frame.dispose());
@@ -221,6 +244,8 @@ public class SwingView implements GameView {
         screens.setPreferredSize(new Dimension(Assets.WIDTH, Assets.HEIGHT));
         screens.add(new MainMenuPanel(this::menuClicked), MENU_SCREEN);
         screens.add(text, TEXT_SCREEN);
+        highScores = new HighScoresPanel(this::backFromScores);
+        screens.add(highScores, SCORES_SCREEN);
 
         // the text screen shows first, so anything printed before the menu (like a
         // startup error) is visible
@@ -248,11 +273,20 @@ public class SwingView implements GameView {
             case QUIT: answerMenu(MenuChoice.QUIT); break;
             case LOAD_GAME: loadGameClicked(); break;
             case SETTINGS: comingSoon("Settings"); break;
-            case HIGH_SCORES: comingSoon("High Scores"); break;
+            case HIGH_SCORES: answerMenu(MenuChoice.HIGH_SCORES); break;
         }
     }
 
     // one answer per menu visit, so a double click can't start two things
+    // EDT only. The first Back click answers, any more are ignored until the screen shows again
+    private void backFromScores() {
+        if (!scoresWaiting) {
+            return;
+        }
+        scoresWaiting = false;
+        answers.offer(BACK_TO_MENU);
+    }
+
     private void answerMenu(MenuChoice choice) {
         menuWaiting = false;
         answers.offer(choice);

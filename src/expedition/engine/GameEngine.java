@@ -20,6 +20,7 @@ import expedition.io.GameDataSource;
 import expedition.exception.DataLoadException;
 import expedition.exception.SaveException;
 import expedition.io.SaveStore;
+import expedition.io.ScoreStore;
 import expedition.expedition.ExpeditionSelector;
 import expedition.expedition.Expedition;
 import expedition.world.DrillSite;
@@ -30,6 +31,7 @@ import expedition.hazard.HazardSet;
 import expedition.hazard.Hazard;
 import expedition.util.TextWrapper; 
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -38,24 +40,29 @@ public class GameEngine {
     // 8 planets in a run
     private static final int ROUTE_LENGTH = 8;
     
+    // how many runs the high-score screen lists, as many as fit on Nadia's screen
+    private static final int HIGH_SCORES_SHOWN = 8;
+    
     private final GameView view;
     private final GameConfig config;
     private final GameDataSource data;
     private final ExpeditionSelector selector;
     private final RunLogWriter log;
     private final SaveStore saves;
+    private final ScoreStore scores;
     private List<Hazard> allHazards = List.of();
     private final Long fixedSeed;
     
     public GameEngine(GameView view, GameConfig config, 
                       GameDataSource data, ExpeditionSelector selector, 
-                      RunLogWriter log, SaveStore saves, Long fixedSeed) {
+                      RunLogWriter log, SaveStore saves, ScoreStore scores, Long fixedSeed) {
         this.view = view;
         this.config = config;
         this.data = data;
         this.selector = selector;
         this.log = log;
         this.saves = saves;
+        this.scores = scores;
         this.fixedSeed = fixedSeed;
     }
     
@@ -81,6 +88,7 @@ public class GameEngine {
                     }
                     break;
                 case HOW_TO_PLAY: showInstructions(); break;
+                case HIGH_SCORES: showHighScores(); break;
                 case QUIT: playing = false; break;
             }
         }
@@ -162,6 +170,25 @@ public class GameEngine {
             view.print("Run saved.");
         } catch (SaveException e) {
             view.print("The run could not be saved: " + e.getMessage());
+        }
+    }
+    
+    private void showHighScores() {
+        try {
+            view.showHighScores(scores.top(HIGH_SCORES_SHOWN));
+        } catch (SaveException e) {
+            view.print("The high scores could not be read: " + e.getMessage());
+        }
+    }
+    
+    // works out the run's score, shows it, and adds it to the high-score table
+    private void recordScore(Ending ending) {
+        HighScore score = HighScore.from(ending, LocalDateTime.now());
+        view.print("Score: " + score.score());
+        try {
+            scores.add(score);
+        } catch (SaveException e) {
+            view.print("The score could not be saved: " + e.getMessage());
         }
     }
     
@@ -471,9 +498,10 @@ public class GameEngine {
             view.print("Lost with the ship: " + namesOrNone(ending.survivorNames()));
         }
         
+        recordScore(ending);
+        
         // write run stats to a log
         log.logEnding(ending);
-        log.appendScore(ending);
     }
     
     // helper method - "nobody" rather than an empty line

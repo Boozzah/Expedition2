@@ -36,6 +36,8 @@ public class DatabaseInitialiser {
             // the first autosave fills them
             createIfAbsent("SAVED_RUN", Schema.SAVED_RUN);
             createIfAbsent("SAVED_CREW", Schema.SAVED_CREW);
+            // starts empty, a row is added each time a run ends
+            createIfAbsent("SCORES", Schema.SCORES);
             
             
             // first run only - once the crew are in, the table is never emptied

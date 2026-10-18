@@ -1,7 +1,7 @@
 /*
  * RunLogWriter
  * Writes the run log (ship's log flavour text + mechanical record of
- * the run) and appends final scores to scores.txt.
+ * the run). Final scores used to go to scores.txt, they are in the SCORES table now.
  */
 package expedition.io;
 
@@ -18,7 +18,6 @@ import java.util.List;
 public class RunLogWriter {
     // file names
     private static final String LOG_FILE = "data/runlog.txt";
-    private static final String SCORES_FILE = "data/scores.txt";
     
     private final GameView view;
     
@@ -74,18 +73,6 @@ public class RunLogWriter {
     }
     
     
-    // append score, to scores file
-     public void appendScore(Ending ending) {
-          write(SCORES_FILE, true,
-                timestamp()
-                + "|" + ending.reason()
-                + "|" + ending.planetsReached()
-                + "|" + ending.totalOilCollected()
-                + "|" + (ending.anyoneSurvived() ? ending.survivorNames().size(): 0)
-                + "|" + ending.deadNames().size());
-    }
-     
-     
     // The only place that writes to a file. append=false truncates, true adds to the end
     // String... means it can take multiple string inputs
     private void write(String fileName, boolean append, String... lines) {
