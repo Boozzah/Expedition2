@@ -62,7 +62,7 @@ public class AscentPhase implements HaulHolder {
 
         // the story first, then what the Pilot saved, then the damage
         view.print("");
-        view.print(TextWrapper.wrap(outcome.text(), 100));
+        view.print(TextWrapper.wrap(outcome.text()));
         outcome = pilotMitigates(outcome);
 
         HazardReport report = new HazardReport(state, view);

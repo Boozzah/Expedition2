@@ -13,8 +13,17 @@ package expedition.util;
 // let text run off screen
 public final class TextWrapper 
 {
-    private TextWrapper() { }; 
-    
+    // AI assisted - Claude suggested one LINE_WIDTH constant instead of passing 100 everywhere
+    // how wide the game's text is, in characters
+    public static final int LINE_WIDTH = 100;
+
+    private TextWrapper() { };
+
+    public static String wrap(String text)
+    {
+        return wrap(text, LINE_WIDTH);
+    }
+
     public static String wrap(String text, int maxWidth)
     {
         // makes an array of all the words by noticing when there is a space. 

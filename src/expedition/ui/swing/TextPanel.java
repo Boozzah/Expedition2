@@ -51,7 +51,8 @@ class TextPanel extends JPanel {
         log.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 15));
         log.setBackground(BACKGROUND);
         log.setForeground(TEXT);
-        log.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 24));
+        // the wide right margin keeps the text clear of the ☰ button in the top right corner
+        log.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 110));
 
         JScrollPane scroll = new JScrollPane(log);
         scroll.setBorder(null);
