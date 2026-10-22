@@ -180,7 +180,7 @@ public class DrillSession implements HaulHolder
         
         // shows the flavour text that gives the story of what happened
         view.print(""); 
-        view.print(TextWrapper.wrap(outcome.text(), 100));
+        view.print(TextWrapper.wrap(outcome.text()));
         
         // bundles all the details so that the effect of the hazard can take from them, like the state, the crew you chose, and everything in this drill session
         EffectContext ctx = new EffectContext(state, team, this); 

@@ -9,6 +9,7 @@ package expedition.engine;
 
 import expedition.crew.CrewMember;
 import expedition.exception.QuitGameException;
+import expedition.exception.ReturnToMenuException;
 import expedition.ship.FuelEconomy;
 import expedition.ship.Ship;
 import expedition.ui.GameView;
@@ -75,21 +76,27 @@ public class GameEngine {
         while(playing) {
             // main menu
             MenuChoice choice = view.showMainMenu(hasSave());
-            switch(choice) {
-                case NEW_GAME:
-                    if (confirmNewRun()) {
-                        playRun(startNewRun());
-                    }
-                    break;
-                case RESUME:
-                    RunState resumed = resumeRun();
-                    if (resumed != null) {
-                        playRun(resumed);
-                    }
-                    break;
-                case HOW_TO_PLAY: showInstructions(); break;
-                case HIGH_SCORES: showHighScores(); break;
-                case QUIT: playing = false; break;
+            // AI assisted - Claude suggested catching ReturnToMenuException here so leaving a run goes back to the menu
+            try {
+                switch(choice) {
+                    case NEW_GAME:
+                        if (confirmNewRun()) {
+                            playRun(startNewRun());
+                        }
+                        break;
+                    case RESUME:
+                        RunState resumed = resumeRun();
+                        if (resumed != null) {
+                            playRun(resumed);
+                        }
+                        break;
+                    case HOW_TO_PLAY: showInstructions(); break;
+                    case HIGH_SCORES: showHighScores(); break;
+                    case QUIT: playing = false; break;
+                }
+            } catch (ReturnToMenuException e) {
+                // the player left from the in-game menu. The save isn't deleted, so
+                // Load Game carries on from the last planet the ship reached
             }
         }
     }
@@ -301,10 +308,10 @@ public class GameEngine {
         view.print("=== EXPEDITION ==="); 
         view.print("After an expedition you ascend to the mothership, but they arent there...");
         view.print("You check the location tracker of the ship and see that they have left beacons planets away.");
-        view.print(TextWrapper.wrap("Theres only so much fuel this ship can hold so you know you will have to make some more stops along the way before you get home.", 100));
+        view.print(TextWrapper.wrap("Theres only so much fuel this ship can hold so you know you will have to make some more stops along the way before you get home."));
         view.print("");
-        view.print(TextWrapper.wrap("Your mission is to collect enough fuel to get home, you must jump to a planet and decide if you want to drill. Just know that drilling can be risky.", 100));
-        view.print(TextWrapper.wrap("Hazards can cost you fuel, or even your crews life. Every jump costs more than the last so manage your fuel wisely. Good luck on your mission.", 100));
+        view.print(TextWrapper.wrap("Your mission is to collect enough fuel to get home, you must jump to a planet and decide if you want to drill. Just know that drilling can be risky."));
+        view.print(TextWrapper.wrap("Hazards can cost you fuel, or even your crews life. Every jump costs more than the last so manage your fuel wisely. Good luck on your mission."));
         view.print("");
     }
     
@@ -312,7 +319,7 @@ public class GameEngine {
         // flavour formatting
         view.print("");
         view.print("=== " + planet.name() + " (" + planet.archetype() + ") ===");
-        view.print(TextWrapper.wrap(planet.introFlavour(), 100));
+        view.print(TextWrapper.wrap(planet.introFlavour()));
         
         // write to run log
         log.log("=== " + planet.name() + " (" + planet.archetype() + ") ===");
@@ -352,20 +359,7 @@ public class GameEngine {
                 break;
             }
             
-            // flavour text
-            view.print("");
-            view.print("--- Drill sites ---");
-            for(int i = 0; i < sites.size(); i++) {
-                DrillSite s = sites.get(i);
-                // randomise hazard chance for each site option
-                int riskStart = (int) Math.round(s.tier().hazardChance(1) * 100);
-                int riskDeep = (int) Math.round(s.tier().hazardChance(s.tier().getMaxDepth()) * 100);
-                
-                view.print("  " + (i + 1) + ". " + s.name()
-                          + "  [" + s.tier() + "]"
-                          + "  est. " + s.estimatedOil()
-                          + "  hazard " + riskStart + "% rising to " + riskDeep + "%");
-            }
+            showSites(sites);
             
             int pick = view.readInt("Choose a site: ", 1, sites.size());
             if (pick == GameView.BACK) {
@@ -377,15 +371,7 @@ public class GameEngine {
             // counts drill phases, which is what raises ascent risk
             planet.incrementExpeditionCount();
             
-            // create a list of applicable hazards for a given planet
-            List<Hazard> applicable = new ArrayList<>();
-            for(Hazard h : allHazards) {
-                if (h.set() == HazardSet.UNIVERSAL || h.set().name().equals(planet.archetype().name())) {
-                    applicable.add(h);
-                }
-            }
-            
-            int haul = new DrillSession(site, team, state, view, config, applicable, oilAboard).run();
+            int haul = new DrillSession(site, team, state, view, config, hazardsFor(planet), oilAboard).run();
             oilAboard += haul;
             view.print("");
             view.print("Hauled " + haul + " oil.");
@@ -407,6 +393,34 @@ public class GameEngine {
         
         ascend(state, planet, team, oilAboard);
         return team;
+    }
+    
+    // AI assisted - Claude suggested splitting showSites and hazardsFor out of visitPlanet to make it shorter
+    // the numbered list of sites to drill, with each one's hazard chance at the top and bottom
+    private void showSites(List<DrillSite> sites) {
+        view.print("");
+        view.print("--- Drill sites ---");
+        for(int i = 0; i < sites.size(); i++) {
+            DrillSite s = sites.get(i);
+            int riskStart = (int) Math.round(s.tier().hazardChance(1) * 100);
+            int riskDeep = (int) Math.round(s.tier().hazardChance(s.tier().getMaxDepth()) * 100);
+            
+            view.print("  " + (i + 1) + ". " + s.name()
+                      + "  [" + s.tier() + "]"
+                      + "  est. " + s.estimatedOil()
+                      + "  hazard " + riskStart + "% rising to " + riskDeep + "%");
+        }
+    }
+    
+    // the hazards that can happen while drilling this planet: the universal ones plus its archetype's own
+    private List<Hazard> hazardsFor(Planet planet) {
+        List<Hazard> applicable = new ArrayList<>();
+        for(Hazard h : allHazards) {
+            if (h.set() == HazardSet.UNIVERSAL || h.set().name().equals(planet.archetype().name())) {
+                applicable.add(h);
+            }
+        }
+        return applicable;
     }
     
     // The climb back to the ship, then whatever oil survived it goes in the tank
@@ -465,21 +479,21 @@ public class GameEngine {
                 view.print(TextWrapper.wrap("You see the mothership, its lights through the windows, and you are so excited to be back in the warmth of your home. You dock the ship, and your "
                         + "family is already waiting for you. Tears are streaming down everyones faces. You watch your other crewmates get the same welcoming. You will not "
                         + "be going for another expedition for a while. There will be a celebration tonight but all you care about is that you are home, you are with your "
-                        + "family again and you are safe... CONGRATULATIONS YOU HAVE WON THE GAME", 100)); 
+                        + "family again and you are safe... CONGRATULATIONS YOU HAVE WON THE GAME")); 
                 break;
             case ADRIFT: 
                 view.print(TextWrapper.wrap("You search for anywhere fuel could be hidden, maybe you could make fuel out of your food. You try blending your food and putting it into the engine "
                         + "but all that did was waste what you had left. There is no hope. You will never see your family again, never see your home, your friends, or eat your "
                         + "favourite food. You try to break open the window. But all that leaves you with is broken tools, so you sit there hopeless with only one path you "
-                        + "can take... GAME OVER, TRY AGAIN", 100)); 
+                        + "can take... GAME OVER, TRY AGAIN")); 
                 break;
             case HULL_FAILURE:
                 view.print(TextWrapper.wrap("The ships lights slowly turn off, the alarms sound and you realize that the only piece of home you have left is gone. The only small piece of saftey "
                         + "is breaking apart. You grab the only photo you have of your family, get into bed and try to dream that you made it home. That they welcomed you "
-                        + "back. Having missed you for so long. And then you hear the oxygen waring... GAME OVER, TRY AGAIN", 100));
+                        + "back. Having missed you for so long. And then you hear the oxygen waring... GAME OVER, TRY AGAIN"));
                 break; 
             case CREW_LOST:
-                view.print(TextWrapper.wrap("There is noone left. The ship sits empty with noone to take it home to the mother ship. Now a floating piece of rubbish in space... GAME OVER, TRY AGAIN", 100));
+                view.print(TextWrapper.wrap("There is noone left. The ship sits empty with noone to take it home to the mother ship. Now a floating piece of rubbish in space... GAME OVER, TRY AGAIN"));
                 break; 
             default: view.print("The run has ended");
         }

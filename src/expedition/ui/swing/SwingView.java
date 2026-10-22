@@ -23,15 +23,22 @@
  * Closing the window is the same as typing Q in the console. It puts a QUIT marker in
  * the queue, and whatever question the engine is on (or gets to next) throws
  * QuitGameException, so Main still gets to shut the database down properly.
+ *
+ * Leaving a run from the in-game menu (the ☰ button, or Esc) works the same way with a
+ * MENU marker. The question the engine is on throws ReturnToMenuException, which
+ * GameEngine catches and goes back to the main menu.
  */
 package expedition.ui.swing;
 
 import expedition.engine.HighScore;
 import expedition.exception.QuitGameException;
+import expedition.exception.ReturnToMenuException;
 import expedition.ui.GameView;
 import expedition.ui.MenuChoice;
 import java.awt.CardLayout;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.lang.reflect.InvocationTargetException;
@@ -39,9 +46,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import javax.swing.AbstractAction;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 public class SwingView implements GameView {
@@ -53,6 +64,13 @@ public class SwingView implements GameView {
 
     // put in the queue when the window is closed, instead of a real answer
     private static final Object QUIT = new Object();
+
+    // put in the queue when the player picks Main Menu in the in-game menu
+    private static final Object MENU = new Object();
+
+    // where the ☰ button sits, in from the top right corner. Far enough left to
+    // clear the text screen's scroll bar
+    private static final int MENU_BUTTON_MARGIN = 24;
 
     // the answer from the Continue button, see showMainMenu
     private static final Object CONTINUE = new Object();
@@ -76,6 +94,7 @@ public class SwingView implements GameView {
     private JPanel screens;
     private TextPanel text;
     private HighScoresPanel highScores;
+    private ImageButton menuButton;
 
     // Only touched on the EDT. True while the engine is waiting on the main menu, so
     // a menu click only counts when the engine is actually asking for one
@@ -108,7 +127,7 @@ public class SwingView implements GameView {
         unreadText = true;
         SwingUtilities.invokeLater(() -> {
             text.append(line);
-            cards.show(screens, TEXT_SCREEN);
+            showScreen(TEXT_SCREEN);
         });
     }
 
@@ -129,21 +148,21 @@ public class SwingView implements GameView {
         } else {
             showOnTextScreen(() -> text.showSpinner(prompt, min, max, GameView.BACK));
         }
-        return (Integer) waitForAnswer();
+        return (Integer) waitForGameAnswer();
     }
 
     @Override
     public String readChoice(String prompt, List<String> options) throws QuitGameException {
         checkNotEdt();
         showOnTextScreen(() -> text.showButtons(prompt, options, options));
-        return (String) waitForAnswer();
+        return (String) waitForGameAnswer();
     }
 
     @Override
     public boolean readYesNo(String prompt) throws QuitGameException {
         checkNotEdt();
         showOnTextScreen(() -> text.showButtons(prompt, List.of("Yes", "No"), List.of(true, false)));
-        return (Boolean) waitForAnswer();
+        return (Boolean) waitForGameAnswer();
     }
 
     @Override
@@ -153,7 +172,7 @@ public class SwingView implements GameView {
         // How to Play and the ending of a run both print their text and then go straight
         // back to the menu. In the console the text stays on screen above the menu, but
         // here the menu would cover it before anyone could read it. So if there is
-        // unread text, wait for a Continue click first
+        // unread text, wait for a Continue click first. Main Menu from the ☰ menu counts as Continue
         if (unreadText) {
             showOnTextScreen(() -> text.showButtons("", List.of("Continue"), List.of(CONTINUE)));
             waitForAnswer();
@@ -162,11 +181,11 @@ public class SwingView implements GameView {
         SwingUtilities.invokeLater(() -> {
             // a fresh screen for whatever comes after the menu
             text.clear();
-            cards.show(screens, MENU_SCREEN);
+            showScreen(MENU_SCREEN);
             this.canResume = canResume;
             menuWaiting = true;
         });
-        return (MenuChoice) waitForAnswer();
+        return (MenuChoice) waitIgnoringMenu();
     }
 
     // shows the scores screen and waits until the player clicks Back
@@ -175,10 +194,10 @@ public class SwingView implements GameView {
         checkNotEdt();
         SwingUtilities.invokeLater(() -> {
             highScores.showScores(scores);
-            cards.show(screens, SCORES_SCREEN);
+            showScreen(SCORES_SCREEN);
             scoresWaiting = true;
         });
-        waitForAnswer();
+        waitIgnoringMenu();
     }
 
     @Override
@@ -192,7 +211,7 @@ public class SwingView implements GameView {
     private void showOnTextScreen(Runnable change) {
         SwingUtilities.invokeLater(() -> {
             change.run();
-            cards.show(screens, TEXT_SCREEN);
+            showScreen(TEXT_SCREEN);
         });
     }
 
@@ -211,6 +230,27 @@ public class SwingView implements GameView {
         }
         // they answered, so they have had the chance to read what was printed before
         unreadText = false;
+        return answer;
+    }
+
+    // AI assisted - Claude suggested a MENU marker in the answer queue, the same way QUIT works
+    // waitForAnswer for a question asked during a run, where Main Menu in the
+    // in-game menu leaves the run
+    private Object waitForGameAnswer() throws QuitGameException {
+        Object answer = waitForAnswer();
+        if (answer == MENU) {
+            throw new ReturnToMenuException();
+        }
+        return answer;
+    }
+
+    // For the menu and score screens, which are already out of the run. A MENU left in
+    // the queue from a double click would have nothing to leave, so it's skipped
+    private Object waitIgnoringMenu() throws QuitGameException {
+        Object answer;
+        do {
+            answer = waitForAnswer();
+        } while (answer == MENU);
         return answer;
     }
 
@@ -233,8 +273,7 @@ public class SwingView implements GameView {
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                answers.offer(QUIT);
-                frame.dispose();
+                quit();
             }
         });
 
@@ -247,16 +286,65 @@ public class SwingView implements GameView {
         highScores = new HighScoresPanel(this::backFromScores);
         screens.add(highScores, SCORES_SCREEN);
 
+        frame.add(screens);
+        addMenuButton();
+
         // the text screen shows first, so anything printed before the menu (like a
         // startup error) is visible
-        cards.show(screens, TEXT_SCREEN);
+        showScreen(TEXT_SCREEN);
 
-        frame.add(screens);
         frame.pack();
         // Nadia's art is drawn for exactly 1280x720
         frame.setResizable(false);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+    }
+
+    // AI assisted - Claude suggested putting the ☰ button in the layered pane and binding Esc on the root pane
+    // The ☰ button floats over the top right of every in-game screen, in the frame's
+    // layered pane so a screen doesn't need to make room for it. Esc opens it too
+    private void addMenuButton() {
+        menuButton = new ImageButton(InGameMenu.icon(), "Menu (Esc)");
+        menuButton.setLocation(Assets.WIDTH - MENU_BUTTON_MARGIN - menuButton.getWidth(), MENU_BUTTON_MARGIN);
+        menuButton.addActionListener(e -> openInGameMenu());
+        frame.getLayeredPane().add(menuButton, JLayeredPane.PALETTE_LAYER);
+
+        JComponent root = frame.getRootPane();
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "inGameMenu");
+        root.getActionMap().put("inGameMenu", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                openInGameMenu();
+            }
+        });
+    }
+
+    // Swaps to a screen. The ☰ button only shows on the in-game screens, the menu and
+    // score screens are already out of the run
+    private void showScreen(String name) {
+        cards.show(screens, name);
+        menuButton.setVisible(TEXT_SCREEN.equals(name));
+    }
+
+    private void openInGameMenu() {
+        if (menuButton.isVisible()) {
+            new InGameMenu(frame, this::inGameMenuClicked).setVisible(true);
+        }
+    }
+
+    private void inGameMenuClicked(InGameMenu.Choice choice) {
+        switch (choice) {
+            case MAIN_MENU: answers.offer(MENU); break;
+            case QUIT: quit(); break;
+            case RESUME: break;
+        }
+    }
+
+    // the window goes straight away rather than waiting for the engine
+    private void quit() {
+        answers.offer(QUIT);
+        frame.dispose();
     }
 
     // Turns a click on the menu screen into the MenuChoice the engine is waiting for.
