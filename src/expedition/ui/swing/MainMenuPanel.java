@@ -2,8 +2,9 @@
  * MainMenuPanel
  *
  * Screen 1, the main menu, laid out to match Nadia's example menu: the planet
- * background, the EXPEDITION title, four menu buttons down the middle, help in the
- * top left and settings + high scores in the top right.
+ * background, the EXPEDITION title, four menu buttons down the middle, and settings +
+ * high scores in the top right. Help is in How to Play and the in-game menu, so the ?
+ * that was in the top left has gone, as Nadia asked.
  *
  * It doesn't decide what any button does. It hands the choice to whoever made it
  * (SwingView), which turns it into the MenuChoice the engine is waiting for.
@@ -26,7 +27,7 @@ import javax.swing.JPanel;
 
 class MainMenuPanel extends JPanel {
 
-    enum Choice { NEW_GAME, LOAD_GAME, HOW_TO_PLAY, QUIT, HELP, SETTINGS, HIGH_SCORES }
+    enum Choice { NEW_GAME, LOAD_GAME, HOW_TO_PLAY, QUIT, SETTINGS, HIGH_SCORES }
 
     private static final String TITLE = "EXPEDITION";
     private static final float TITLE_SIZE = 171f;
@@ -37,7 +38,7 @@ class MainMenuPanel extends JPanel {
     private static final int MENU_TOP = 213;            // top of the first button image
     private static final int MENU_STEP = 113;           // top of one button to the next
 
-    private static final int ICON_MARGIN = 72;          // from the left/right edge
+    private static final int ICON_MARGIN = 72;          // from the right edge
     private static final int ICON_TOP = 33;
     private static final int ICON_STEP = 128;           // gear to trophy
 
@@ -58,10 +59,6 @@ class MainMenuPanel extends JPanel {
             b.setLocation(x, MENU_TOP + i * MENU_STEP);
             addButton(b, choices[i], onChoice);
         }
-
-        ImageButton help = new ImageButton(Assets.load("help-button.png"), "How to play");
-        help.setLocation(ICON_MARGIN, ICON_TOP);
-        addButton(help, Choice.HELP, onChoice);
 
         ImageButton settings = new ImageButton(Assets.load("settings-button.png"), "Settings");
         settings.setLocation(Assets.WIDTH - ICON_MARGIN - settings.getWidth(), ICON_TOP);
