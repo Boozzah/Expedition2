@@ -14,7 +14,12 @@ public abstract class CrewMember {
     
     // crew member can still go on expediton but cannot use their ability
     private static int FATIGUE_THRESHOLD = 50;
-    
+
+    // below any of these a crew member can't go on an expedition at all
+    private static final int MIN_HEALTH = 30;
+    private static final int MIN_STAMINA = 25;
+    private static final int MIN_COMPOSURE = 25;
+
     // Crew member variables
     private final String name;
     private int health;
@@ -53,7 +58,25 @@ public abstract class CrewMember {
     
     // returns boolean if crew member is able to go on expedition
     public boolean isEligible() {
-        return isAlive() && getHealth() >= 30 && getStamina() >= 25 && getComposure() >= 25;
+        return ineligibleReason() == null;
+    }
+
+    // why this crew member can't go down, or null if they can. The first failing
+    // reason wins, so the crew screen shows one clear reason rather than several
+    public String ineligibleReason() {
+        if (!isAlive()) {
+            return "DEAD";
+        }
+        if (health < MIN_HEALTH) {
+            return "Health " + health + ", cannot deploy";
+        }
+        if (stamina < MIN_STAMINA) {
+            return "Stamina " + stamina + ", cannot deploy";
+        }
+        if (composure < MIN_COMPOSURE) {
+            return "Composure " + composure + ", cannot deploy";
+        }
+        return null;
     }
     
     public void die() {

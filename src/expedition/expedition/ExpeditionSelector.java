@@ -21,13 +21,7 @@ import java.util.List;
 public class ExpeditionSelector {
     private final static int MIN_CREW = 2;
     private final static int MAX_CREW = 3;
-    
-    // TODO: these duplicate CrewMember.isEligible()'s thresholds. better would be for
-    // crewMember to report its own reason for being ineligible
-    private static final int MIN_HEALTH = 30;
-    private static final int MIN_STAMINA = 25;
-    private static final int MIN_COMPOSURE = 25;
-    
+
     private final GameView view;
     private final GameConfig config;
     
@@ -125,19 +119,11 @@ public class ExpeditionSelector {
         }
     }
     
-    // first failing reason winss, so one clear reason is reported rather than multiple
+    // the crew member gives its own reason for not deploying, so the thresholds live in one place
     private String statusOf(CrewMember member) {
-        if (!member.isAlive()) {
-            return "DEAD";
-        }
-        if (member.getHealth() < MIN_HEALTH) {
-            return "Health " + member.getHealth() + ", cannot deploy";
-        }
-        if (member.getStamina() < MIN_STAMINA) {
-            return "Stamina " + member.getStamina() + ", cannot deploy.";
-        }
-        if (member.getComposure() < MIN_COMPOSURE) {
-              return "Composure " + member.getComposure() + ", cannot deploy";
+        String reason = member.ineligibleReason();
+        if (reason != null) {
+            return reason;
         }
         // checked after the trip's stamina cost, since that's when the ability would be used
         if (member.fatiguedAfter(config.staminaExpeditionCost())) {
