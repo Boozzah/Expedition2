@@ -7,6 +7,7 @@
  */
 package expedition.ui.swing;
 
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -23,6 +24,8 @@ class ImageButton extends JButton {
     // Measured from Nadia's example menu: the lighter face of the long button
     // sits a little above the middle of the image
     private static final double TEXT_CENTRE = 0.48;
+
+    private static final float DISABLED_ALPHA = 0.35f;
 
     private final BufferedImage image;
     private final String label;
@@ -58,6 +61,10 @@ class ImageButton extends JButton {
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
+        // a button that can't be clicked right now is faded out
+        if (!isEnabled()) {
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, DISABLED_ALPHA));
+        }
         g2.drawImage(image, 0, 0, null);
 
         if (label != null) {
