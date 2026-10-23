@@ -1,10 +1,13 @@
 /*
  * SwingView
  *
- * The window version of GameView. The window has three screens and swaps between them:
- * - the main menu, Nadia's MainMenuPanel
- * - the high scores, HighScoresPanel
- * - the text screen, TextPanel, for every part of the game that has no screen of its own yet
+ * The window version of GameView. The window has one screen for each of Nadia's
+ * drawings and swaps between them with a CardLayout:
+ * - the main menu, the high scores, Load Game, How to Play and the story at the start
+ * - the game screens, which come in over the next few files
+ * - the text screen, TextPanel, for any question that has no screen of its own
+ * On top of the screens, in the frame's layered pane, are the ☰ button, the notices that
+ * print() shows, and the overlay the popups sit on.
  *
  * How the threads work, every method in here follows these rules:
  * - GameEngine keeps its one long loop that waits for answers. It runs on the main
@@ -27,14 +30,21 @@
  * Leaving a run from the in-game menu (the ☰ button, or Esc) works the same way with a
  * MENU marker. The question the engine is on throws ReturnToMenuException, which
  * GameEngine catches and goes back to the main menu.
+ *
+ * Each screen only answers once per question (see GameScreen), and any answer still in the
+ * queue from an earlier question is dropped before a new one is asked, so a fast double
+ * click can never answer the next question by accident.
  */
 package expedition.ui.swing;
 
 import expedition.engine.HighScore;
 import expedition.exception.QuitGameException;
 import expedition.exception.ReturnToMenuException;
+import expedition.io.SaveSlot;
 import expedition.ui.GameView;
 import expedition.ui.MenuChoice;
+import expedition.ui.RunControls;
+import expedition.ui.screen.Popup;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
@@ -44,13 +54,14 @@ import java.awt.event.WindowEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
@@ -61,6 +72,12 @@ public class SwingView implements GameView {
     private static final String MENU_SCREEN = "menu";
     private static final String SCORES_SCREEN = "scores";
     private static final String TEXT_SCREEN = "text";
+    private static final String LORE_SCREEN = "lore";
+    private static final String HOW_TO_PLAY_SCREEN = "howToPlay";
+    private static final String LOAD_SCREEN = "load";
+
+    // the screens outside a run, which have no ☰ button
+    private static final Set<String> MENU_SCREENS = Set.of(MENU_SCREEN, SCORES_SCREEN, HOW_TO_PLAY_SCREEN, LOAD_SCREEN);
 
     // put in the queue when the window is closed, instead of a real answer
     private static final Object QUIT = new Object();
@@ -78,6 +95,12 @@ public class SwingView implements GameView {
     // the answer from the Back button on the high-score screen
     private static final Object BACK_TO_MENU = new Object();
 
+    // the answer from a popup's DONE button
+    private static final Object POPUP_DONE = new Object();
+
+    // the in-game menu's Help window: the book plus a Close button under it
+    private static final int HELP_CLOSE_GAP = 10;
+
     // readInt gets one button per number up to this many, more than that gets a spinner
     private static final int MAX_NUMBER_BUTTONS = 10;
 
@@ -94,7 +117,22 @@ public class SwingView implements GameView {
     private JPanel screens;
     private TextPanel text;
     private HighScoresPanel highScores;
+    private LoreScreen lore;
+    private HowToPlayScreen howToPlay;
+    private LoadScreen load;
     private ImageButton menuButton;
+    private NoticeBar notices;
+    private Overlay overlay;
+
+    // Only touched on the EDT. The screen showing, so print() knows whether to show a notice
+    private String currentScreen = TEXT_SCREEN;
+
+    // The run being played, for the in-game menu's score and Save Game. Set by the engine
+    // thread and read on the EDT, so volatile. null outside a run
+    private volatile RunControls controls;
+
+    // How to Play's pages, kept for the in-game menu's Help. Set by the engine thread
+    private volatile List<String> helpPages = List.of();
 
     // Only touched on the EDT. True while the engine is waiting on the main menu, so
     // a menu click only counts when the engine is actually asking for one
@@ -122,12 +160,17 @@ public class SwingView implements GameView {
 
     // ---- GameView, called on the engine thread ----
 
+    // Everything printed goes in the text screen's log. On any other screen it also shows
+    // as a notice near the bottom, rather than switching away from the screen
     @Override
     public void print(String line) {
-        unreadText = true;
         SwingUtilities.invokeLater(() -> {
             text.append(line);
-            showScreen(TEXT_SCREEN);
+            if (TEXT_SCREEN.equals(currentScreen)) {
+                unreadText = true;
+            } else {
+                notices.add(line);
+            }
         });
     }
 
@@ -174,6 +217,7 @@ public class SwingView implements GameView {
         // here the menu would cover it before anyone could read it. So if there is
         // unread text, wait for a Continue click first. Main Menu from the ☰ menu counts as Continue
         if (unreadText) {
+            unreadText = false;
             showOnTextScreen(() -> text.showButtons("", List.of("Continue"), List.of(CONTINUE)));
             waitForAnswer();
         }
@@ -205,7 +249,71 @@ public class SwingView implements GameView {
         SwingUtilities.invokeLater(() -> frame.dispose());
     }
 
+    @Override
+    public void runStarted(RunControls controls) {
+        this.controls = controls;
+    }
+
+    @Override
+    public void runEnded() {
+        this.controls = null;
+        SwingUtilities.invokeLater(() -> menuButton.setVisible(false));
+    }
+
+    @Override
+    public void showLore(String title, String story) throws QuitGameException {
+        ask(lore, LORE_SCREEN, () -> lore.show(title, story), true);
+    }
+
+    @Override
+    public void showHowToPlay(List<String> pages) throws QuitGameException {
+        helpPages = pages;
+        ask(howToPlay, HOW_TO_PLAY_SCREEN, () -> howToPlay.show(pages), false);
+    }
+
+    @Override
+    public SaveSlot chooseSave(List<SaveSlot> slots) throws QuitGameException {
+        Object answer = ask(load, LOAD_SCREEN, () -> load.show(slots), false);
+        return (answer instanceof SaveSlot slot) ? slot : null;
+    }
+
+    // the popup goes over whatever screen is showing, and the engine waits for DONE
+    @Override
+    public void showPopup(Popup popup) throws QuitGameException {
+        checkNotEdt();
+        dropOldAnswers();
+        SwingUtilities.invokeLater(() -> {
+            PopupBox box = new PopupBox(popup, () -> {
+                overlay.close();
+                answers.offer(POPUP_DONE);
+            });
+            overlay.show(box);
+            box.shakeIfHazard();
+        });
+        waitForGameAnswer();
+    }
+
     // ---- helpers for the engine thread ----
+
+    // Shows a screen for a question and waits for its answer. fill runs on the EDT first and
+    // puts this question's details on the screen. inRun is false for the screens outside a
+    // run, where Main Menu from the ☰ menu has nothing to leave
+    private Object ask(GameScreen screen, String name, Runnable fill, boolean inRun) throws QuitGameException {
+        checkNotEdt();
+        dropOldAnswers();
+        SwingUtilities.invokeLater(() -> {
+            fill.run();
+            screen.startWaiting();
+            showScreen(name);
+        });
+        return inRun ? waitForGameAnswer() : waitIgnoringMenu();
+    }
+
+    // A click left in the queue from an earlier question can't answer this one. QUIT and
+    // MENU stay, they mean the player wants out whatever is being asked
+    private void dropOldAnswers() {
+        answers.removeIf(a -> a != QUIT && a != MENU);
+    }
 
     // runs a change to the text screen on the EDT and makes sure it is the one showing
     private void showOnTextScreen(Runnable change) {
@@ -285,9 +393,20 @@ public class SwingView implements GameView {
         screens.add(text, TEXT_SCREEN);
         highScores = new HighScoresPanel(this::backFromScores);
         screens.add(highScores, SCORES_SCREEN);
+        lore = new LoreScreen(answers::offer);
+        screens.add(lore, LORE_SCREEN);
+        howToPlay = new HowToPlayScreen(answers::offer, this::openSettings);
+        screens.add(howToPlay, HOW_TO_PLAY_SCREEN);
+        load = new LoadScreen(answers::offer, this::openSettings);
+        screens.add(load, LOAD_SCREEN);
 
         frame.add(screens);
         addMenuButton();
+
+        notices = new NoticeBar();
+        frame.getLayeredPane().add(notices, JLayeredPane.PALETTE_LAYER);
+        overlay = new Overlay();
+        frame.getLayeredPane().add(overlay, JLayeredPane.MODAL_LAYER);
 
         // the text screen shows first, so anything printed before the menu (like a
         // startup error) is visible
@@ -320,25 +439,79 @@ public class SwingView implements GameView {
         });
     }
 
-    // Swaps to a screen. The ☰ button only shows on the in-game screens, the menu and
-    // score screens are already out of the run
+    // Swaps to a screen. The ☰ button only shows during a run, the menu screens are
+    // already out of it. Notices from the screen before are cleared
     private void showScreen(String name) {
+        if (!name.equals(currentScreen)) {
+            notices.clear();
+        }
+        currentScreen = name;
         cards.show(screens, name);
-        menuButton.setVisible(TEXT_SCREEN.equals(name));
+        menuButton.setVisible(controls != null && !MENU_SCREENS.contains(name));
     }
 
     private void openInGameMenu() {
-        if (menuButton.isVisible()) {
-            new InGameMenu(frame, this::inGameMenuClicked).setVisible(true);
+        RunControls run = controls;
+        if (!menuButton.isVisible() || run == null) {
+            return;
         }
+        InGameMenu.inGame(frame, run.score(), new InGameMenu.Actions() {
+            @Override
+            public void help() {
+                openHelp();
+            }
+
+            @Override
+            public String save(String name) {
+                return run.save(name);
+            }
+
+            @Override
+            public String saveAndQuit() {
+                return run.saveAndQuit();
+            }
+
+            @Override
+            public void quitToMenu() {
+                answers.offer(MENU);
+            }
+
+            @Override
+            public void quitToDesktop() {
+                quit();
+            }
+        }).setVisible(true);
     }
 
-    private void inGameMenuClicked(InGameMenu.Choice choice) {
-        switch (choice) {
-            case MAIN_MENU: answers.offer(MENU); break;
-            case QUIT: quit(); break;
-            case RESUME: break;
-        }
+    // How to Play in a window over the game, from the in-game menu's Help
+    private void openHelp() {
+        JDialog help = new JDialog(frame, true);
+        help.setUndecorated(true);
+        JPanel panel = new JPanel(null);
+        panel.setBackground(Draw.NAVY);
+        BookPanel book = new BookPanel();
+        book.setLocation(0, 0);
+        book.show(helpPages);
+        panel.add(book);
+        ImageButton close = Draw.smallButton("CLOSE");
+        close.setLocation((BookPanel.WIDTH - close.getWidth()) / 2, BookPanel.HEIGHT + HELP_CLOSE_GAP);
+        close.addActionListener(e -> help.dispose());
+        panel.add(close);
+        panel.setPreferredSize(new Dimension(BookPanel.WIDTH, BookPanel.HEIGHT + 2 * HELP_CLOSE_GAP + close.getHeight()));
+        help.setContentPane(panel);
+        help.pack();
+        help.setLocationRelativeTo(frame);
+        help.setVisible(true);
+    }
+
+    // the gear on the menu screens
+    private void openSettings() {
+        InGameMenu.settings(frame, this::quit).setVisible(true);
+    }
+
+    // a message over the screen that the engine isn't waiting on, like Load Game with nothing saved
+    private void showMessage(String message) {
+        overlay.show(new PopupBox(Popup.info(message), overlay::close));
     }
 
     // the window goes straight away rather than waiting for the engine
@@ -347,21 +520,23 @@ public class SwingView implements GameView {
         frame.dispose();
     }
 
-    // Turns a click on the menu screen into the MenuChoice the engine is waiting for.
-    // The menu has more buttons than the game has features so far
+    // Turns a click on the menu screen into the MenuChoice the engine is waiting for
     private void menuClicked(MainMenuPanel.Choice choice) {
+        // the settings don't need the engine, so they open even while it is busy
+        if (choice == MainMenuPanel.Choice.SETTINGS) {
+            openSettings();
+            return;
+        }
         if (!menuWaiting) {
             return;
         }
         switch (choice) {
             case NEW_GAME: answerMenu(MenuChoice.NEW_GAME); break;
-            // the ? button and How to Play open the same instructions
-            case HOW_TO_PLAY:
-            case HELP: answerMenu(MenuChoice.HOW_TO_PLAY); break;
+            case HOW_TO_PLAY: answerMenu(MenuChoice.HOW_TO_PLAY); break;
             case QUIT: answerMenu(MenuChoice.QUIT); break;
             case LOAD_GAME: loadGameClicked(); break;
-            case SETTINGS: comingSoon("Settings"); break;
             case HIGH_SCORES: answerMenu(MenuChoice.HIGH_SCORES); break;
+            default: break;
         }
     }
 
@@ -380,20 +555,14 @@ public class SwingView implements GameView {
         answers.offer(choice);
     }
 
-    // The game autosaves at every planet, so Load Game just resumes that save.
-    // With no save there is nothing to load, so the player stays on the menu
+    // Load Game lists the saves to pick from. With no save there is nothing to load,
+    // so the player stays on the menu
     private void loadGameClicked() {
         if (canResume) {
             answerMenu(MenuChoice.RESUME);
         } else {
-            JOptionPane.showMessageDialog(frame, "There is no saved run yet. The game saves itself each time the ship reaches a planet.",
-                    "Load Game", JOptionPane.INFORMATION_MESSAGE);
+            showMessage("There is no saved run yet. The game saves itself each time the ship reaches a planet, "
+                    + "and you can save from the menu during a run.");
         }
-    }
-
-    // the engine isn't asked anything, the player just stays on the menu
-    private void comingSoon(String feature) {
-        JOptionPane.showMessageDialog(frame, feature + " isn't in the game yet.",
-                "Coming soon", JOptionPane.INFORMATION_MESSAGE);
     }
 }
