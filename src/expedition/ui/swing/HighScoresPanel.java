@@ -51,8 +51,7 @@ class HighScoresPanel extends JPanel {
     private static final int COL_PLANETS = 830;
     private static final int COL_SCORE_RIGHT = 1100;
 
-    private static final float BUTTON_TEXT_SIZE = 60f;
-    private static final int BUTTON_MARGIN = 40;        // from the right and bottom edges
+    private static final int BUTTON_MARGIN = 22;        // from the right and bottom edges
 
     private final BufferedImage background = Assets.load("menu-background.png");
     private final Font titleFont = Assets.pixelta(TITLE_SIZE);
@@ -65,11 +64,10 @@ class HighScoresPanel extends JPanel {
         setLayout(null);   // fixed 1280x720 art, everything is placed by hand
         setPreferredSize(new Dimension(Assets.WIDTH, Assets.HEIGHT));
 
-        BufferedImage buttonImage = Assets.load("menu-button.png");
-        ImageButton back = new ImageButton(buttonImage, "BACK",
-                Assets.pixelta(BUTTON_TEXT_SIZE), HEADER_TEXT);
-        back.setLocation(Assets.WIDTH - BUTTON_MARGIN - buttonImage.getWidth(),
-                Assets.HEIGHT - BUTTON_MARGIN - buttonImage.getHeight());
+        // the same small BACK as the other menu screens
+        ImageButton back = Draw.smallButton("BACK");
+        back.setLocation(Assets.WIDTH - BUTTON_MARGIN - back.getWidth(),
+                Assets.HEIGHT - BUTTON_MARGIN - back.getHeight());
         back.addActionListener(e -> onBack.run());
         add(back);
     }

@@ -47,6 +47,7 @@ import expedition.ui.RunControls;
 import expedition.ui.screen.Choices;
 import expedition.ui.screen.CrewCard;
 import expedition.ui.screen.DrillStatus;
+import expedition.ui.screen.EndingInfo;
 import expedition.ui.screen.ItemInfo;
 import expedition.ui.screen.LevelResult;
 import expedition.ui.screen.PlanetInfo;
@@ -89,6 +90,9 @@ public class SwingView implements GameView {
     private static final String CREW_SCREEN = "crew";
     private static final String SITES_SCREEN = "sites";
     private static final String DRILL_SCREEN = "drill";
+    private static final String COCKPIT_SCREEN = "cockpit";
+    private static final String OUT_OF_FUEL_SCREEN = "outOfFuel";
+    private static final String ENDING_SCREEN = "ending";
 
     // the screens outside a run, which have no ☰ button
     private static final Set<String> MENU_SCREENS = Set.of(MENU_SCREEN, SCORES_SCREEN, HOW_TO_PLAY_SCREEN, LOAD_SCREEN);
@@ -139,6 +143,9 @@ public class SwingView implements GameView {
     private CrewScreen crew;
     private SiteMapScreen sites;
     private DrillScreen drill;
+    private CockpitScreen cockpit;
+    private OutOfFuelScreen outOfFuel;
+    private EndingScreen ending;
 
     // the planet the ship is at, so the site map and drill screens can draw it. Set on the
     // engine thread when the ship arrives
@@ -219,18 +226,19 @@ public class SwingView implements GameView {
         return (Integer) waitForGameAnswer();
     }
 
+    // a choice box over whatever screen is showing, rather than swapping to the text screen
     @Override
     public String readChoice(String prompt, List<String> options) throws QuitGameException {
-        checkNotEdt();
-        showOnTextScreen(() -> text.showButtons(prompt, options, options));
-        return (String) waitForGameAnswer();
+        List<String> labels = new ArrayList<>();
+        for (String option : options) {
+            labels.add(option.toUpperCase());
+        }
+        return options.get(choose(prompt, labels));
     }
 
     @Override
     public boolean readYesNo(String prompt) throws QuitGameException {
-        checkNotEdt();
-        showOnTextScreen(() -> text.showButtons(prompt, List.of("Yes", "No"), List.of(true, false)));
-        return (Boolean) waitForGameAnswer();
+        return choose(prompt, List.of("YES", "NO")) == 0;
     }
 
     @Override
@@ -348,16 +356,25 @@ public class SwingView implements GameView {
         for (ItemInfo item : hold) {
             options.add("THROW OUT " + item.name().toUpperCase() + " (" + item.count() + ")");
         }
-        checkNotEdt();
-        dropOldAnswers();
-        SwingUtilities.invokeLater(() -> overlay.show(new ChoiceBox(
-                "You found a " + found + " but the hold is full (" + capacity + " items). Leave it, or throw something out for it?",
-                options, pick -> {
-                    overlay.close();
-                    answers.offer(pick);
-                })));
-        int pick = (Integer) waitForGameAnswer();
+        int pick = choose("You found a " + found + " but the hold is full (" + capacity + " items). Leave it, or throw something out for it?",
+                options);
         return (pick == 0) ? null : hold.get(pick - 1).name();
+    }
+
+    @Override
+    public Choices.Jump jumpScreen(ShipStatus status) throws QuitGameException {
+        return (Choices.Jump) ask(cockpit, COCKPIT_SCREEN, () -> cockpit.show(status), true);
+    }
+
+    @Override
+    public boolean outOfFuel(int fuel, int jumpCost, boolean canGoBack, int pointsCost) throws QuitGameException {
+        Object answer = ask(outOfFuel, OUT_OF_FUEL_SCREEN, () -> outOfFuel.show(fuel, jumpCost, canGoBack, pointsCost), true);
+        return answer == OutOfFuelScreen.BACK_IN_TIME;
+    }
+
+    @Override
+    public void showEnding(EndingInfo info) throws QuitGameException {
+        ask(ending, ENDING_SCREEN, () -> ending.show(info), true);
     }
 
     // the popup goes over whatever screen is showing, and the engine waits for DONE
@@ -390,6 +407,17 @@ public class SwingView implements GameView {
             showScreen(name);
         });
         return inRun ? waitForGameAnswer() : waitIgnoringMenu();
+    }
+
+    // Asks a question in a box over the screen and returns the position of the answer picked
+    private int choose(String question, List<String> answerLabels) throws QuitGameException {
+        checkNotEdt();
+        dropOldAnswers();
+        SwingUtilities.invokeLater(() -> overlay.show(new ChoiceBox(question, answerLabels, pick -> {
+            overlay.close();
+            answers.offer(pick);
+        })));
+        return (Integer) waitForGameAnswer();
     }
 
     // A click left in the queue from an earlier question can't answer this one. QUIT and
@@ -492,6 +520,12 @@ public class SwingView implements GameView {
         screens.add(sites, SITES_SCREEN);
         drill = new DrillScreen(answers::offer, this::openDrillInventory);
         screens.add(drill, DRILL_SCREEN);
+        cockpit = new CockpitScreen(answers::offer, this::openCockpitInventory);
+        screens.add(cockpit, COCKPIT_SCREEN);
+        outOfFuel = new OutOfFuelScreen(answers::offer);
+        screens.add(outOfFuel, OUT_OF_FUEL_SCREEN);
+        ending = new EndingScreen(answers::offer);
+        screens.add(ending, ENDING_SCREEN);
 
         frame.add(screens);
         addMenuButton();
@@ -605,6 +639,17 @@ public class SwingView implements GameView {
                 use -> {
                     overlay.close();
                     drill.answer(new Choices.Drill(Choices.DrillAction.USE_ITEM, use));
+                },
+                overlay::close));
+    }
+
+    // The inventory before a jump. Anyone aboard can be given something
+    private void openCockpitInventory() {
+        ShipStatus status = cockpit.ship();
+        overlay.show(new InventoryBox(status.items(), status.crew(), status.holdCapacity(),
+                use -> {
+                    overlay.close();
+                    cockpit.answer(new Choices.Jump(use));
                 },
                 overlay::close));
     }
