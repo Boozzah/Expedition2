@@ -28,7 +28,7 @@ class ImageButton extends JButton {
     private static final float DISABLED_ALPHA = 0.35f;
 
     private final BufferedImage image;
-    private final String label;
+    private String label;
     private final Color textColour;
 
     // an icon-only button, the tooltip says what it does
@@ -84,6 +84,12 @@ class ImageButton extends JButton {
             g2.drawString(label, (float) x, (float) y);
         }
         g2.dispose();
+    }
+
+    // for a button whose text changes, like ITEMS (3)
+    void setLabelText(String label) {
+        this.label = label;
+        repaint();
     }
 
     // only the visible part of the image is clickable
