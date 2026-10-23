@@ -7,6 +7,7 @@
 package expedition.io.db;
 
 import expedition.crew.CrewMember;
+import expedition.event.JumpEvent;
 import expedition.exception.DataLoadException;
 import expedition.exception.DatabaseException;
 import expedition.hazard.Hazard;
@@ -51,6 +52,15 @@ public class DerbyDataSource implements GameDataSource {
             return new ItemDao().findAll();
         } catch (DatabaseException e) {
             throw new DataLoadException("ITEMS", e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<JumpEvent> loadEvents() throws DataLoadException {
+        try {
+            return new EventDao().findAll();
+        } catch (DatabaseException e) {
+            throw new DataLoadException("EVENTS", e.getMessage(), e);
         }
     }
 }

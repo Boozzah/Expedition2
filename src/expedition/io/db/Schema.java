@@ -61,6 +61,16 @@ final class Schema {
             + "DROP_WEIGHT INTEGER NOT NULL, "
             + "DESCRIPTION VARCHAR(500) NOT NULL)";
     
+    // The jump events from events.txt. ID keeps them in file order, like ITEMS
+    static final String EVENTS = 
+            "CREATE TABLE EVENTS ("
+            + "ID INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, "
+            + "TEXT VARCHAR(1000) NOT NULL, "
+            // the effect codes as they are in the file, the same as HAZARD_OUTCOMES
+            + "EFFECTS VARCHAR(500) NOT NULL, "
+            + "POINTS INTEGER NOT NULL, "
+            + "WEIGHT INTEGER NOT NULL)";
+    
     // One row per saved run. The autosave is the row with AUTOSAVE set, the others are the
     // named saves the player made. SAVED_CREW points at the slot the same way
     // HAZARD_OUTCOMES points at HAZARDS
