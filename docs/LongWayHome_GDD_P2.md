@@ -170,7 +170,7 @@ The DB lives at `data/expedition-db/` — inside the project folder, as the brie
 | `PLANETS` | Name, archetype, flavour, site pool | ✓ | seed |
 | `HAZARDS` / `HAZARD_OUTCOMES` | Hazard header + six severity rows (text, effect codes) | ✓ | seed |
 | `ITEMS` | Item definitions, effects, drop weights | ✓ | seed |
-| ~~`JUMP_EVENTS` / `EVENT_OUTCOMES`~~ | ~~Event table~~ — **cut**, see §10 | — | — |
+| `EVENTS` | Jump events: text, effect codes, points, weight — **added back in Week 13**, see §5.4 | ✓ | seed |
 | `SETTINGS` | Tuning values from `config.txt`; editable in-game | ✓ | ✓ |
 | `SAVED_RUN` | Full run state: seed, planet index, fuel, hull, crew stats, inventory | ✓ | ✓ |
 | `RUN_LOG` | Ship's log lines, one row per entry, keyed by run | ✓ | ✓ |
@@ -230,7 +230,9 @@ Per GDD §13.1, each system collects the hooks from expedition members and never
 
 `AscentPhase.java` is empty. Roll whether an ascent hazard fires, let `AscentModifier` transform it, apply the outcome. This is what makes the Pilot matter and what makes `hull` meaningful — `GameEngine.java:248` notes hull "does not mean anything at this stage".
 
-### 5.4 Jump events — **CUT** *(see §10)*
+### 5.4 Jump events — **added back** *(Week 13, from Nadia's screen designs)*
+
+Built after all: `data/events.txt` seeds the `EVENTS` table, `EventTable` rolls one on `JUMP_EVENT_CHANCE` of jumps with a weighted pick, and the effects reuse the hazard effect codes (anything but `OIL_PCT` and `CLOSE_SITE`, which need a drill site). Each event also carries points for the run's score. The events in `events.txt` are placeholders to be rewritten. The original reasoning for the cut is kept below.
 
 `JumpEvent.java` and `EventTable.java` are empty and will stay that way. A weighted event table rolled during the jump, with eligibility conditions (GDD §9), was the plan — but with three build weeks it is the one system that is entirely greenfield, carries no marking-guideline weight of its own, and has nothing depending on it.
 
