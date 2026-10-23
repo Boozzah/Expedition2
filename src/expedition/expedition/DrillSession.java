@@ -108,6 +108,7 @@ public class DrillSession implements HaulHolder
                 // at the true bottom instead of drilling into nothing
                 if (geologistCallsBottom())
                 {
+                    state.score().siteDrilledDry();
                     break;
                 }
 
@@ -115,6 +116,7 @@ public class DrillSession implements HaulHolder
                 if(consecutiveEmpty >= 2)
                 {
                     view.print("You watch the site collapse in on itself. Theres nothing more to find here");
+                    state.score().siteDrilledDry();
                     break;
                 }
             }
@@ -148,7 +150,10 @@ public class DrillSession implements HaulHolder
         // if there is no yield for 2 levels in a row then it is consecutivley empty and is a force quit because you have hit the end. 
         consecutiveEmpty = (yield == 0) ? consecutiveEmpty + 1 : 0; 
         
-        view.print("Level " + depth + ": " + yield + " oil.");
+        // points for the oil, and a bonus for pushing deeper than most would
+        int points = state.score().oilDrilled(yield) + state.score().levelDrilled(depth);
+        
+        view.print("Level " + depth + ": " + yield + " oil, +" + points + " points.");
         
         // rolled on every level, even empty ones - GDD 5.4 says the drop is independent of
         // the yield, so finding an item doesnt tell the player anything about the vein
@@ -221,15 +226,16 @@ public class DrillSession implements HaulHolder
         view.print("  Found: " + item.name() + " - " + item.description());
         
         Inventory bag = state.ship().inventory();
-        if (!bag.add(item))
+        if (bag.add(item) || makeRoomFor(item, bag))
         {
-            makeRoomFor(item, bag);
+            state.score().itemCollected();
         }
     }
     
     // GDD 10: a full hold turns finding an item into a choice - leave it, or throw
-    // something out for it. Numbered like the drill menu so it works in the window too
-    private void makeRoomFor(Item item, Inventory bag)
+    // something out for it. Numbered like the drill menu so it works in the window too.
+    // Returns true if the item was kept
+    private boolean makeRoomFor(Item item, Inventory bag)
     {
         view.print("  The hold is full (" + bag.capacity() + " items).");
         view.print("  1) Leave the " + item.name() + " behind");
@@ -248,13 +254,14 @@ public class DrillSession implements HaulHolder
         if (choice < 2)
         {
             view.print("  The " + item.name() + " is left behind.");
-            return;
+            return false;
         }
         
         String thrownOut = names.get(choice - 2);
         bag.take(thrownOut);
         bag.add(item);
         view.print("  Threw out one " + thrownOut + " to make room for the " + item.name() + ".");
+        return true;
     }
     
     // important for hazards as you may have loss 40% of oil, and this calculates that

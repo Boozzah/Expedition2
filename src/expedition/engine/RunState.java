@@ -32,6 +32,7 @@ public class RunState  {
     private int planetIndex = 0;
     private Ending ending = null;
     private int totalOilCollected = 0;
+    private final ScoreSheet score;
     
     // what rng was last reseeded with by checkpoint(), and at which planet. -1 means
     // there hasn't been a checkpoint yet
@@ -54,6 +55,10 @@ public class RunState  {
         
         int count = Math.min(planetsPerRun, pool.size()); // guards a short planets.txt
         this.route = new ArrayList<>(pool.subList(0, count));
+        
+        // the run starts at the first planet, so it counts as reached straight away
+        this.score = new ScoreSheet();
+        score.planetReached();
     }
     
     // for restore() - the route is already drawn, so nothing is shuffled here
@@ -67,6 +72,7 @@ public class RunState  {
         this.itemTable = itemTable;
         this.planetIndex = saved.planetIndex();
         this.totalOilCollected = saved.totalOilCollected();
+        this.score = new ScoreSheet(saved.score(), saved.oilDrilled());
         
         // the save was taken at this planet's checkpoint, so checkpoint() mustn't reseed again here
         this.rngSeed = saved.rngSeed();
@@ -104,7 +110,8 @@ public class RunState  {
         }
         
         return new SavedRun(seed, rngSeed, planetIndex, totalOilCollected,
-                ship.fuel(), ship.parts(), routeNames, itemNames, savedCrew);
+                ship.fuel(), ship.parts(), routeNames, itemNames, savedCrew,
+                score.breakdown(), score.oilDrilledSoFar());
     }
     
     // Builds a run back up from a save. The planets and items come from the game content
@@ -153,6 +160,10 @@ public class RunState  {
     
     public Ship ship() { 
         return this.ship; 
+    }
+    
+    public ScoreSheet score() {
+        return this.score;
     }
     
     public ItemTable itemTable() {
@@ -236,6 +247,7 @@ public class RunState  {
         // so cap it at the route length.
         int reached = Math.min(planetIndex + 1, route.size());
         ending = new Ending(reason, reached, survivors, dead, totalOilCollected); 
+        score.finish(ending);
     }
     public void advancePlanet(Expedition team) {
         List<CrewMember> wentDown = (team == null) ? List.of() : team.members();
@@ -249,6 +261,11 @@ public class RunState  {
             }
         }
         planetIndex++;
+        
+        // the last jump goes home rather than to another planet
+        if (planetIndex < route.size()) {
+            score.planetReached();
+        }
     }
 
     // Kills a crew member AND applies the composure penalty to every other

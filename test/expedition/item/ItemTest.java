@@ -80,7 +80,7 @@ public class ItemTest {
         ship.damage(ShipPart.EXHAUST, 40);
 
         // only 10 was missing, so only 10 of the kit's 25 is used
-        int repaired = new RepairKit("Repair Kit", "test", 25).repair(ship, ShipPart.HULL);
+        int repaired = new RepairKit("Repair Kit", "test", 25).repair(ctx, ShipPart.HULL);
         assertEquals(10, repaired);
         assertEquals(100, ship.part(ShipPart.HULL));
         assertEquals(60, ship.part(ShipPart.EXHAUST));

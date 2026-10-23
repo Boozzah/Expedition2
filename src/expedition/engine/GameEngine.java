@@ -35,6 +35,7 @@ import expedition.util.TextWrapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
 
 public class GameEngine {
     
@@ -188,9 +189,14 @@ public class GameEngine {
         }
     }
     
-    // works out the run's score, shows it, and adds it to the high-score table
-    private void recordScore(Ending ending) {
-        HighScore score = HighScore.from(ending, LocalDateTime.now());
+    // shows where the run's score came from, and adds it to the high-score table
+    private void recordScore(Ending ending, ScoreSheet sheet) {
+        HighScore score = HighScore.from(ending, sheet.total(), LocalDateTime.now());
+        view.print("");
+        for (Map.Entry<ScoreSheet.Reason, Integer> line : sheet.breakdown().entrySet()) {
+            String sign = (line.getValue() > 0) ? "+" : "";
+            view.print(String.format("  %-20s %s%d", line.getKey().label(), sign, line.getValue()));
+        }
         view.print("Score: " + score.score());
         try {
             scores.add(score);
@@ -512,7 +518,7 @@ public class GameEngine {
             view.print("Lost with the ship: " + namesOrNone(ending.survivorNames()));
         }
         
-        recordScore(ending);
+        recordScore(ending, state.score());
         
         // write run stats to a log
         log.logEnding(ending);
