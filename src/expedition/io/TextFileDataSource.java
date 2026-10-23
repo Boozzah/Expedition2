@@ -20,6 +20,7 @@ import expedition.hazard.effect.EffectParser;
 import expedition.crew.CrewFactory;
 import expedition.item.ItemDefinition;
 import expedition.item.ItemKind;
+import expedition.event.JumpEvent;
 
 import java.io.BufferedReader;                                                        
 import java.io.FileReader;
@@ -37,6 +38,10 @@ public class TextFileDataSource implements GameDataSource {
     private static final String PLANET_FILE = "data/planets.txt";
     private static final String HAZARD_FILE = "data/hazards.txt";
     private static final String ITEM_FILE = "data/items.txt";
+    private static final String EVENT_FILE = "data/events.txt";
+    
+    // effects that only make sense on a drill site, so a jump event can't use them
+    private static final List<String> DRILL_ONLY_EFFECTS = List.of("OIL_PCT", "CLOSE_SITE");
     
     // split() treats its arguement as a regex, and in a regex a | means or - it would split every character
     // two backslashes means escape it and its a literal pipe
@@ -253,6 +258,34 @@ public class TextFileDataSource implements GameDataSource {
             items.add(new ItemDefinition(name, kind, amount, bonus, dropWeight, description));
         }
         return items;
+    }
+    
+    // events.txt: TEXT|EFFECTS|POINTS|WEIGHT
+    @Override
+    public List<JumpEvent> loadEvents() throws DataLoadException {
+        List<JumpEvent> events = new ArrayList<>();
+        
+        for (Row row : readRows(EVENT_FILE, 4)) {
+            String text = row.fields()[0].trim();
+            String codes = row.fields()[1].trim();
+            int points = number(row.fields()[2], EVENT_FILE, row.lineNumber());
+            int weight = number(row.fields()[3], EVENT_FILE, row.lineNumber());
+            
+            // checked here so a mistake shows up at startup, rather than crashing on
+            // the jump the event finally comes up on
+            for (String drillOnly : DRILL_ONLY_EFFECTS) {
+                if (codes.toUpperCase().contains(drillOnly)) {
+                    throw new DataLoadException(EVENT_FILE, row.lineNumber(), drillOnly + " only works on a drill site, not on a jump");
+                }
+            }
+            if (weight < 0) {
+                throw new DataLoadException(EVENT_FILE, row.lineNumber(), "weight can't be negative, found " + weight);
+            }
+            
+            List<Effect> effects = EffectParser.parse(codes, EVENT_FILE, row.lineNumber());
+            events.add(new JumpEvent(text, effects, codes, points, weight));
+        }
+        return events;
     }
     
     // Helper methods

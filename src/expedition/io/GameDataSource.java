@@ -8,6 +8,7 @@
 package expedition.io;
 
 import expedition.crew.CrewMember;
+import expedition.event.JumpEvent;
 import expedition.exception.DataLoadException;
 import expedition.world.Planet;
 import expedition.hazard.Hazard;
@@ -20,5 +21,6 @@ public interface GameDataSource {
     List<Planet> loadPlanets() throws DataLoadException;
     List<Hazard> loadHazards() throws DataLoadException;
     List<ItemDefinition> loadItems() throws DataLoadException;
+    List<JumpEvent> loadEvents() throws DataLoadException;
     
 }

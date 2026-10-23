@@ -34,6 +34,10 @@ INVENTORY_SLOTS=8
 # percent chance of finding an item on each drill level (the Surveyor adds 7 more)
 ITEM_DROP_BASE=8
 
+# ---- Jump events ----
+# percent chance of something happening between planets
+JUMP_EVENT_CHANCE=60
+
 # ---------------------------------------------------------------------------
 # NOT YET WIRED UP. These are in GDD but GameConfig doesn't read them yet,
 # so putting them here would do nothing - they'd be silently ignored. Listed so
@@ -52,6 +56,5 @@ ITEM_DROP_BASE=8
 #   COMPOSURE_MIN_ELIGIBLE      25    (hardcoded in CrewMember.isEligible)
 #   COMPOSURE_SHAKEN_THRESHOLD  40    (not implemented)
 #   ITEM_DROP_SURVEYOR_BONUS    7%    (hardcoded in Surveyor)
-#   JUMP_EVENT_CHANCE           60%   (not implemented)
 #   EMPTY_LEVELS_BEFORE_CLOSE   2     (DrillSession, in progress)
 #   MINER_OIL_BONUS             8%    (hardcoded in Miner)

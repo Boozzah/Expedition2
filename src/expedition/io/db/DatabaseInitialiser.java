@@ -32,6 +32,7 @@ public class DatabaseInitialiser {
             createIfAbsent("HAZARDS", Schema.HAZARDS);
             createIfAbsent("HAZARD_OUTCOMES", Schema.HAZARD_OUTCOMES);
             createIfAbsent("ITEMS", Schema.ITEMS);
+            createIfAbsent("EVENTS", Schema.EVENTS);
             // a database from before the ship had parts, the score was kept or there were
             // save slots has a SAVED_RUN without those columns, which the new save can't
             // use. Only the old autosave is lost. AUTOSAVE is the newest column, so
@@ -66,6 +67,11 @@ public class DatabaseInitialiser {
             // gets the table and its rows on the next launch without being deleted
             if (isEmpty("ITEMS")) {
                 new ItemDao().insertAll(seedSource.loadItems());
+            }
+            
+            // the same for the jump events, which came after the items
+            if (isEmpty("EVENTS")) {
+                new EventDao().insertAll(seedSource.loadEvents());
             }
             
         } catch (SQLException e) {

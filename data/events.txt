@@ -1,0 +1,20 @@
+# data/events.txt
+# Things that can happen between planets. PLACEHOLDER TEXT - to be rewritten.
+#
+# TEXT|EFFECTS|POINTS|WEIGHT
+#
+# EFFECTS uses the same codes as hazards.txt (FUEL, HULL, ITEM, DEATH, STAT), separated
+# by ';', or left empty for an event that is only flavour. OIL_PCT and CLOSE_SITE can't
+# be used here, they need a drill site.
+# POINTS is added to the run's score, and can be negative.
+# WEIGHT is how often it comes up compared to the others. 0 means it never does.
+
+You go past a derelict cargo hauler drifting with its lights off. One of its fuel pods is still sealed, so you drag it aboard and drain it into the tank.|FUEL:28|20|10
+You go past a field of glittering ice. It doesn't do anything, but the crew crowd around the window to look and it's the calmest the ship has felt in days.|STAT:COMPOSURE:10:ALL:0|10|12
+A supply drop meant for someone else is floating in your path. Inside you find something useful, and a note that says "enjoy".|ITEM:1|15|8
+Micro meteorites rattle against the ship like hail on a tin roof. Nothing gets through, but something on the outside definitely got dented.|HULL:-12|0|10
+The engine coughs, stalls, and restarts on the third try. It burned more fuel than it should have getting going again.|FUEL:-20|0|8
+Nobody sleeps. The alarms go off three times in the night for no reason, and by morning everyone is on edge and exhausted.|STAT:STAMINA:-15:ALL:0;STAT:COMPOSURE:-8:ALL:0|0|8
+You pick up a faint recording on an old frequency, someone singing to themselves. It's the first other voice you've heard since the mothership left.|STAT:COMPOSURE:15:RANDOM:2|10|6
+You pass close to a planet's rings and use its pull to slingshot forward, saving fuel on the jump.|FUEL:15|15|6
+The jump is quiet. Stars, the hum of the engine, and nothing else.||0|10
