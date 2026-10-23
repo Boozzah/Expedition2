@@ -4,6 +4,10 @@
  * The drawing every game screen needs: Nadia's colours, centred text, text wrapped to fit
  * a box, and her buttons with a label on them. Kept in one place so all the screens
  * look the same and none of them repeats the maths for lining text up.
+ *
+ * Pixelta has no apostrophe or quote marks, so "You've" would draw with a box in it.
+ * string() draws any letter Pixelta can't in a plain serif font instead, and every bit
+ * of text in the game screens goes through it.
  */
 package expedition.ui.swing;
 
@@ -13,8 +17,10 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.font.TextAttribute;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.text.AttributedString;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,7 +54,7 @@ final class Draw {
         Rectangle2D ink = font.createGlyphVector(g.getFontRenderContext(), text).getVisualBounds();
         double x = centreX - ink.getWidth() / 2 - ink.getX();
         double y = top - ink.getY();
-        g.drawString(text, (float) x, (float) y);
+        string(g, text, (float) x, (float) y);
     }
 
     // text with its left edge at x and the top of its letters at top
@@ -57,7 +63,26 @@ final class Draw {
         g.setFont(font);
         g.setColor(colour);
         Rectangle2D caps = font.createGlyphVector(g.getFontRenderContext(), "H").getVisualBounds();
-        g.drawString(text, x, (float) (top - caps.getY()));
+        string(g, text, x, (float) (top - caps.getY()));
+    }
+
+    // Draws text in the graphics' font, with any letter the font can't draw (like ' in
+    // Pixelta) swapped to a serif font of the same size, so it never shows as a box
+    static void string(Graphics2D g, String text, float x, float baseline) {
+        Font font = g.getFont();
+        if (text.isEmpty() || font.canDisplayUpTo(text) == -1) {
+            g.drawString(text, x, baseline);
+            return;
+        }
+        Font fallback = new Font(Font.SERIF, Font.BOLD, font.getSize());
+        AttributedString styled = new AttributedString(text);
+        styled.addAttribute(TextAttribute.FONT, font);
+        for (int i = 0; i < text.length(); i++) {
+            if (!font.canDisplay(text.charAt(i))) {
+                styled.addAttribute(TextAttribute.FONT, fallback, i, i + 1);
+            }
+        }
+        g.drawString(styled.getIterator(), x, baseline);
     }
 
     // Breaks text into lines no wider than width, on the spaces. A word longer than the
@@ -103,7 +128,7 @@ final class Draw {
             String l = lines.get(i);
             int x = box.x + (box.width - fm.stringWidth(l)) / 2;
             int baseline = top + i * step + fm.getAscent();
-            g.drawString(l, x, baseline);
+            string(g, l, x, baseline);
         }
     }
 

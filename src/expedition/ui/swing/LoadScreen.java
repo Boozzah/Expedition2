@@ -169,7 +169,7 @@ class LoadScreen extends GameScreen {
                 name = name.substring(0, Math.max(1, name.length() - 2)) + "..";
             }
             g2.setColor(Color.WHITE);
-            g2.drawString(name, 14, getHeight() / 2 + nameMetrics.getAscent() / 2 - 6);
+            Draw.string(g2, name, 14, getHeight() / 2 + nameMetrics.getAscent() / 2 - 6);
             g2.dispose();
         }
     }
