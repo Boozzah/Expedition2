@@ -24,7 +24,12 @@ import expedition.item.ItemMenu;
 import expedition.ship.Inventory;
 import expedition.ship.FuelEconomy;
 import expedition.crew.CrewMember;
-import expedition.util.TextWrapper; 
+import expedition.ui.screen.Choices;
+import expedition.ui.screen.CrewCard;
+import expedition.ui.screen.DrillStatus;
+import expedition.ui.screen.ItemInfo;
+import expedition.ui.screen.LevelResult;
+import expedition.ui.screen.Popup;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +44,8 @@ public class DrillSession implements HaulHolder
     private int haul = 0; 
     private int consecutiveEmpty = 0; 
     private boolean forceEnd = false; 
+    // true when the player chose to fly back up, rather than move to another site
+    private boolean ascend = false;
     private List<Hazard> hazards;
     // oil from earlier sites on this trip, still on the shuttle until the ascent
     private final int oilAboard;
@@ -71,27 +78,25 @@ public class DrillSession implements HaulHolder
             while (!forceEnd)
             {
                 // drilling actions
-                // this shows the progress of what the crew has already collected in this run and asks the player to choose whether they want to drill deeper or return to the ship
-                printDrillStatus();
-                
-                // GDD 10: items can be used between drill levels. Only offered when there
-                // is something in the hold, so an empty hold doesnt add a dead option
-                boolean hasItems = !state.ship().inventory().isEmpty();
-                view.print(hasItems ? "1) Drill  2) Ascend  3) Use item" : "1) Drill  2) Ascend");
-            
-                // this takes in what the choice was from the user (the input) 
-                int choice = view.readInt("Choose an option: ", 1, hasItems ? 3 : 2); 
+                // this shows the progress of what the crew has already collected in this run and asks the player to choose
+                // whether they want to drill deeper, use an item, move to another site or return to the ship
+                Choices.Drill choice = view.drillTurn(drillStatus());
                 
                 // using an item doesnt drill, it goes back round to the same choice
-                if (choice == 3)
+                if (choice.action() == Choices.DrillAction.USE_ITEM)
                 {
-                    itemMenu.open(team);
+                    itemMenu.use(choice.item(), team);
                     continue;
                 }
-            
-                // only an actual 1 drills deeper. 2 and Back both take the team back up to the
-                // ship, before this Back fell through and drilled another level
-                if (choice != 1)
+                
+                if (choice.action() == Choices.DrillAction.ASCEND)
+                {
+                    ascend = true;
+                    break;
+                }
+                
+                // back to the site map, the team stays down on the planet
+                if (choice.action() == Choices.DrillAction.OTHER_SITE)
                 {
                     break;
                 }
@@ -131,6 +136,12 @@ public class DrillSession implements HaulHolder
         return haul; 
     }
     
+    // true if the player chose to fly back up to the ship, rather than move to another site
+    public boolean wantsToAscend()
+    {
+        return ascend;
+    }
+    
     // drills down a level and then does whatever is necessary - like collecting the oil, applying the miner bonus, updating the haul, and adding to the count. 
     public void drillOneLevel()
     {
@@ -153,11 +164,11 @@ public class DrillSession implements HaulHolder
         // points for the oil, and a bonus for pushing deeper than most would
         int points = state.score().oilDrilled(yield) + state.score().levelDrilled(depth);
         
-        view.print("Level " + depth + ": " + yield + " oil, +" + points + " points.");
-        
         // rolled on every level, even empty ones - GDD 5.4 says the drop is independent of
         // the yield, so finding an item doesnt tell the player anything about the vein
-        rollItemDrop();
+        String found = rollItemDrop();
+        
+        view.showLevelResult(new LevelResult(depth, yield, points, found == null ? List.of() : List.of(found)));
         
         // calls the method that rolls a potentional hazard each time youve drilled a level
         rollHazard(depth); 
@@ -183,15 +194,12 @@ public class DrillSession implements HaulHolder
         // finds the outcome for that severity and holds it 
         HazardOutcome outcome = hazard.outcomeFor(severity); 
         
-        // shows the flavour text that gives the story of what happened
-        view.print(""); 
-        view.print(TextWrapper.wrap(outcome.text()));
-        
         // bundles all the details so that the effect of the hazard can take from them, like the state, the crew you chose, and everything in this drill session
         EffectContext ctx = new EffectContext(state, team, this); 
         
-        // apply hazard effects and report to the player
-        applyAndReport(outcome, ctx);
+        // apply hazard effects, then show the story of what happened with what it did underneath
+        List<String> lines = applyAndReport(outcome, ctx);
+        view.showPopup(new Popup(Popup.Kind.HAZARD, hazard.name(), outcome.text(), lines));
     }
     
     
@@ -209,27 +217,27 @@ public class DrillSession implements HaulHolder
     }
     
     // the Surveyor and Engineer abilities. The Surveyor changes the chance of finding
-    // something at all, the Engineer changes which item it is (more Repair Kits)
-    private void rollItemDrop()
+    // something at all, the Engineer changes which item it is (more Repair Kits).
+    // Returns the name of what was found, or null if nothing was
+    private String rollItemDrop()
     {
         if (state.rng().nextDouble() >= itemDropChance())
         {
-            return;
+            return null;
         }
         
         Item item = state.itemTable().roll(state.rng(), team.itemFinders());
         if (item == null)
         {
-            return;
+            return null;
         }
-        
-        view.print("  Found: " + item.name() + " - " + item.description());
         
         Inventory bag = state.ship().inventory();
         if (bag.add(item) || makeRoomFor(item, bag))
         {
             state.score().itemCollected();
         }
+        return item.name();
     }
     
     // GDD 10: a full hold turns finding an item into a choice - leave it, or throw
@@ -237,27 +245,15 @@ public class DrillSession implements HaulHolder
     // Returns true if the item was kept
     private boolean makeRoomFor(Item item, Inventory bag)
     {
-        view.print("  The hold is full (" + bag.capacity() + " items).");
-        view.print("  1) Leave the " + item.name() + " behind");
-        
         // one option per kind of item rather than per item, so 3 Caffeine is one line
-        List<String> names = new ArrayList<>(bag.stacked().keySet());
-        for (int i = 0; i < names.size(); i++)
-        {
-            String name = names.get(i);
-            view.print("  " + (i + 2) + ") Throw out one " + name + " (have " + bag.stacked().get(name) + ")");
-        }
+        String thrownOut = view.makeRoom(item.name(), ItemInfo.of(bag), bag.capacity());
         
-        int choice = view.readInt("Choose an option: ", 1, names.size() + 1);
-        
-        // 1 and Back both leave the new item, so nothing is thrown away by accident
-        if (choice < 2)
+        if (thrownOut == null)
         {
             view.print("  The " + item.name() + " is left behind.");
             return false;
         }
         
-        String thrownOut = names.get(choice - 2);
         bag.take(thrownOut);
         bag.add(item);
         view.print("  Threw out one " + thrownOut + " to make room for the " + item.name() + ".");
@@ -281,40 +277,30 @@ public class DrillSession implements HaulHolder
     
     // The numbers the drill or ascend decision depends on. Without this the player is choosing blind.
     // The important one is tank space: oil over capacity is thrown away when the haul is banked
-    private void printDrillStatus()
+    private DrillStatus drillStatus()
     {
         int nextLevel = site.vein().currentDepth() + 1;
         int fuel = state.ship().fuel();
         int capacity = config.tankCapacity();               
         // oil from earlier sites goes in the tank first, so it takes up space too
-        int space = Math.max(0, capacity - fuel - oilAboard);
+        int spill = Math.max(0, oilAboard + haul - (capacity - fuel));
         int jumpCost = FuelEconomy.jumpCost(state.jumpNumber(), state.ship().hullPercent(), config);
         int hazardPct = (int) Math.round(site.tier().hazardChance(nextLevel) * 100);
         int itemPct = (int) Math.round(itemDropChance() * 100);
 
-        view.print("");
-        view.print("Next Level: " + nextLevel + "   Current haul: " + haul + " oil"
-                + "   Hazard next level: " + hazardPct + "%"
-                + "   Item chance: " + itemPct + "%");
-
-        String tank = "Tank: " + fuel + "/" + capacity;
-        if (oilAboard > 0) {
-            tank += " + " + oilAboard + " oil on the shuttle";
-        }
-        tank += " (" + space + " space)";
-
-        int spill = oilAboard + haul - (capacity - fuel);
-        if (spill > 0) {
-            tank += " - " + spill + " oil would spill";
-        }                                                   
-        view.print(tank + "   Next jump: " + jumpCost + " fuel");
-
         // the Geologist's reading, so the player knows if an empty level is just
-        // a pocket or the real bottom of the vein
+        // a pocket or the real bottom of the vein. Nobody else can tell how deep it goes
+        int levelsLeft = DrillStatus.UNKNOWN;
+        List<String> insights = new ArrayList<>();
         for (VeinInsight geologist : team.veinInsights())
         {
-            view.print(geologist.describeRemaining(site.vein().levelsRemaining()));
+            levelsLeft = site.vein().levelsRemaining();
+            insights.add(geologist.describeRemaining(levelsLeft));
         }
+
+        return new DrillStatus(site.name(), nextLevel, levelsLeft, haul, oilAboard, fuel, capacity, spill,
+                hazardPct, itemPct, jumpCost, CrewCard.of(team.members(), config),
+                ItemInfo.of(state.ship().inventory()), insights);
     }
 
     // The Geologist's auto eject. True when the vein has nothing left, so run() can
@@ -325,7 +311,7 @@ public class DrillSession implements HaulHolder
         {
             if (geologist.shouldAutoEject(site.vein().levelsRemaining()))
             {
-                view.print(geologist.getName() + " calls it: that was the last of the vein. The team heads back up.");
+                view.print(geologist.getName() + " calls it: that was the last of the vein. The team packs up the drill.");
                 return true;
             }
         }
@@ -335,7 +321,7 @@ public class DrillSession implements HaulHolder
     // The Doctor's ability. After a hazard, a doctor who hasn't healed yet this session
     // treats whoever on the team is now lowest on health. They can't treat themselves,
     // the ability is for helping another crew member
-    private void treatInjured(List<CrewMember> injured)
+    private void treatInjured(List<CrewMember> injured, HazardReport report)
     {
         for (FieldMedic medic : team.fieldMedics())
         {
@@ -364,7 +350,7 @@ public class DrillSession implements HaulHolder
             // health is capped, so report what was actually gained rather than the full 20
             int before = target.getHealth();
             medic.treat(target);
-            view.print("  " + medic.getName() + " treats " + target.getName() + ": health +" + (target.getHealth() - before));
+            report.add(medic.getName() + " treats " + target.getName() + ": health +" + (target.getHealth() - before));
 
             // one heal per hazard is enough
             return;
@@ -373,9 +359,9 @@ public class DrillSession implements HaulHolder
 
     // Fires a hazard's effects and says what it does to the team/fuelsupply etc
     // The effects themselves are silent they just change numbers, so HazardReport
-    // takes a snapshot first and reports the difference to the player afterwards
-    private void applyAndReport(HazardOutcome outcome, EffectContext ctx) {
-        HazardReport report = new HazardReport(state, view);
+    // takes a snapshot first and returns the difference, for the hazard popup
+    private List<String> applyAndReport(HazardOutcome outcome, EffectContext ctx) {
+        HazardReport report = new HazardReport(state);
         int haulBefore = haul;
         boolean closedBefore = forceEnd;
 
@@ -383,15 +369,16 @@ public class DrillSession implements HaulHolder
 
         // now output what changed. injured is the crew on this expedition who
         // survived but lost health, for the Doctor
-        List<CrewMember> injured = report.printCrewChanges(team);
+        List<CrewMember> injured = report.addCrewChanges(team);
 
         // shown after the damage so the player sees what the hazard did, then the heal
-        treatInjured(injured);
+        treatInjured(injured, report);
 
-        report.printShipChanges(haul - haulBefore);
+        report.addShipChanges(haul - haulBefore);
 
         if (forceEnd && !closedBefore) {
-            view.print("  The site is closed. You are coming up.");
+            report.add("The site is closed. The team has to move on.");
         }
+        return report.lines();
     }
 }

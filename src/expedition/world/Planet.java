@@ -84,6 +84,12 @@ public class Planet
        return open; 
     }
     
+    // every site, closed ones included, so the site map can show them in red
+    public List<DrillSite> sites()
+    {
+        return new ArrayList<>(sites);
+    }
+    
     // the more you take trips/expeditions to the drill sites the higher the hazards go, this keeps us updated
     public int expeditionCount()
     {

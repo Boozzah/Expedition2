@@ -36,10 +36,13 @@ public class GameConfig {
     // the percent chance of something happening on a jump
     private final int jumpEventChance;
     
+    // the fuel it costs to move the team to another site on the same planet
+    private final int siteMoveCost;
+    
     private GameConfig(int composureDeathPenalty, int jumpCostBase, int jumpCostIncrement, int startingFuel, int tankCapacity, 
                         int healthRestRecovery, int staminaRestRecovery, int composureRestRecovery, int staminaExpeditionCost,
                         int ascentTriggerBase, int ascentTriggerPerExtraTrip, int inventorySlots, int itemDropBase,
-                        int jumpEventChance)
+                        int jumpEventChance, int siteMoveCost)
     {
         this.composureDeathPenalty = composureDeathPenalty;
         this.jumpCostBase = jumpCostBase; 
@@ -55,6 +58,7 @@ public class GameConfig {
         this.inventorySlots = inventorySlots;
         this.itemDropBase = itemDropBase;
         this.jumpEventChance = jumpEventChance;
+        this.siteMoveCost = siteMoveCost;
     }
     
     // static factory method
@@ -74,6 +78,7 @@ public class GameConfig {
         int inventorySlots = 8; // GDD 10: 8 slots, a 9th item means throwing one away
         int itemDropBase = 8; // GDD 5.5: 8% per drill level, before the Surveyor's bonus
         int jumpEventChance = 60; // GDD 9: 60% of jumps have an event
+        int siteMoveCost = 15; // Nadia's site map: moving to another site costs fuel
         
         try (BufferedReader reader = new BufferedReader(new FileReader("data/config.txt"))) {
               String line;
@@ -114,6 +119,7 @@ public class GameConfig {
                           case "INVENTORY_SLOTS" -> inventorySlots = Integer.parseInt(value);
                           case "ITEM_DROP_BASE" -> itemDropBase = Integer.parseInt(value);
                           case "JUMP_EVENT_CHANCE" -> jumpEventChance = Integer.parseInt(value);
+                          case "SITE_MOVE_COST" -> siteMoveCost = Integer.parseInt(value);
                           default -> { }   // unknown key - ignore it, the file may be from a later version
                       }
                   } catch (NumberFormatException e) {
@@ -129,7 +135,7 @@ public class GameConfig {
                               startingFuel, tankCapacity, healthRestRecovery, 
                               staminaRestRecovery, composureRestRecovery, staminaExpeditionCost,
                               ascentTriggerBase, ascentTriggerPerExtraTrip, inventorySlots, itemDropBase,
-                              jumpEventChance);
+                              jumpEventChance, siteMoveCost);
     }
     
     // Getters
@@ -147,4 +153,5 @@ public class GameConfig {
     public int inventorySlots() { return inventorySlots; }
     public int itemDropBase() { return itemDropBase; }
     public int jumpEventChance() { return jumpEventChance; }
+    public int siteMoveCost() { return siteMoveCost; }
 }

@@ -13,6 +13,7 @@ import expedition.hazard.effect.EffectContext;
 import expedition.ship.Inventory;
 import expedition.ship.ShipPart;
 import expedition.ui.GameView;
+import expedition.ui.screen.Choices;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,39 @@ public class ItemMenu {
             if (target == null) {
                 return;
             }
+        }
+
+        use(name, target, team);
+    }
+
+    // What the player picked on screen. ASK means the view couldn't pick one itself (the
+    // console), so the numbered menu asks instead
+    public void use(Choices.ItemUse choice, Expedition team) {
+        if (choice.ask()) {
+            open(team);
+            return;
+        }
+        CrewMember target = null;
+        for (CrewMember m : state.livingCrew()) {
+            if (m.getName().equals(choice.crewName())) {
+                target = m;
+            }
+        }
+        use(choice.itemName(), target, team);
+    }
+
+    // Uses one of the named item on target (null for an item that fixes the ship), and says
+    // what it did. This is the part the window calls straight away, it picks the item and the
+    // crew member itself
+    public void use(String name, CrewMember target, Expedition team) {
+        Inventory bag = state.ship().inventory();
+        Item item = firstNamed(bag, name);
+        if (item == null) {
+            return;
+        }
+        if (item.needsCrewTarget() && target == null) {
+            view.print("  Choose who to give the " + name + " to.");
+            return;
         }
 
         // only taken out now it is definitely being used

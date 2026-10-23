@@ -4,7 +4,8 @@
  * they just change numbers, so the player would otherwise read the story and
  * find the damage later on. Takes a snapshot of everything an effect can touch
  * when it's made, then compares against it once the effects have fired.
- * Used by both DrillSession and AscentPhase so the damage reads the same in both.
+ * Used by DrillSession, AscentPhase and the jump events so the damage reads the same in all of them.
+ * The lines are kept rather than printed, so the screen can show them under the story in one popup.
  */
 package expedition.expedition;
 
@@ -12,7 +13,6 @@ import expedition.crew.CrewMember;
 import expedition.crew.Role;
 import expedition.engine.RunState;
 import expedition.ship.ShipPart;
-import expedition.ui.GameView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,8 @@ import java.util.Map;
 public class HazardReport {
 
     private final RunState state;
-    private final GameView view;
+    // what happened, one line each, e.g. "Mikela: health -20"
+    private final List<String> lines = new ArrayList<>();
 
     // everything that an effect can touch, as it was before the hazard
     private final int[] health;
@@ -33,9 +34,8 @@ public class HazardReport {
     private final Map<String, Integer> itemsBefore;
 
     // make this right before outcome.applyAll() so the snapshot is the "before"
-    public HazardReport(RunState state, GameView view) {
+    public HazardReport(RunState state) {
         this.state = state;
-        this.view = view;
 
         List<CrewMember> crew = state.crew();
         int n = crew.size();
@@ -56,10 +56,10 @@ public class HazardReport {
         itemsBefore = state.ship().inventory().stacked();
     }
 
-    // Prints a line for each crew member who changed. Returns the members of the team
+    // Adds a line for each crew member who changed. Returns the members of the team
     // who survived but lost health, so the Doctor knows who to treat. team is null for a
     // jump event, everyone is aboard the ship and there is no Doctor on a team to treat them
-    public List<CrewMember> printCrewChanges(Expedition team) {
+    public List<CrewMember> addCrewChanges(Expedition team) {
         List<CrewMember> crew = state.crew();
         List<CrewMember> injured = new ArrayList<>();
         List<CrewMember> onTeam = (team == null) ? List.of() : team.livingMembers();
@@ -68,12 +68,12 @@ public class HazardReport {
             CrewMember m = crew.get(i);
 
             if (alive[i] && !m.isAlive()) {
-                view.print("  " + m.getName() + " is killed.");
+                lines.add(m.getName() + " is killed.");
 
                 // GDD 3.1: losing the Pilot is said plainly, so the player feels the run
                 // get harder now rather than finding out on a later ascent
                 if (m.getRole() == Role.PILOT) {
-                    view.print("  Ascent risk is now unmitigated.");
+                    lines.add("Ascent risk is now unmitigated.");
                 }
                 continue;   // their stat losses are not the story here
             }
@@ -84,7 +84,7 @@ public class HazardReport {
             changes += change(changes, "composure", m.getComposure() - composure[i]);
 
             if (!changes.isEmpty()) {
-                view.print("  " + m.getName() + ": " + changes);
+                lines.add(m.getName() + ": " + changes);
             }
 
             // lost health to this hazard and is still with the team
@@ -95,9 +95,9 @@ public class HazardReport {
         return injured;
     }
 
-    // Prints one line for the oil, fuel and any ship part that was hit. The oil change is passed in because
+    // Adds one line for the oil, fuel and any ship part that was hit. The oil change is passed in because
     // the oil is held by whoever is carrying it, not by the ship
-    public void printShipChanges(int oilChange) {
+    public void addShipChanges(int oilChange) {
         String ship = "";
         ship += change(ship, "oil", oilChange);
         ship += change(ship, "fuel", state.ship().fuel() - fuelBefore);
@@ -106,14 +106,14 @@ public class HazardReport {
         }
 
         if (!ship.isEmpty()) {
-            view.print("  " + ship);
+            lines.add(ship);
         }
-        printItemChanges();
+        addItemChanges();
     }
 
     // compares the inventory by name, so it reads "found: Caffeine" rather than
     // the player having to open the inventory to notice
-    private void printItemChanges() {
+    private void addItemChanges() {
         Map<String, Integer> itemsAfter = state.ship().inventory().stacked();
         String found = "";
         String lost = "";
@@ -132,10 +132,10 @@ public class HazardReport {
         }
 
         if (!found.isEmpty()) {
-            view.print("  found: " + found);
+            lines.add("found: " + found);
         }
         if (!lost.isEmpty()) {
-            view.print("  lost: " + lost);
+            lines.add("lost: " + lost);
         }
     }
 
@@ -153,5 +153,14 @@ public class HazardReport {
         String sep = soFar.isEmpty() ? "" : ", ";
         String sign = (change > 0) ? "+" : "";
         return sep + label + " " + sign + change;
+    }
+
+    // for anything else the hazard caused, like the Doctor treating someone
+    public void add(String line) {
+        lines.add(line);
+    }
+
+    public List<String> lines() {
+        return List.copyOf(lines);
     }
 }

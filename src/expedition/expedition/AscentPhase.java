@@ -15,7 +15,7 @@ import expedition.hazard.HazardOutcome;
 import expedition.hazard.SeverityRoller;
 import expedition.hazard.effect.EffectContext;
 import expedition.ui.GameView;
-import expedition.util.TextWrapper;
+import expedition.ui.screen.Popup;
 import expedition.world.Planet;
 
 import java.util.List;
@@ -61,30 +61,29 @@ public class AscentPhase implements HaulHolder {
         HazardOutcome outcome = hazard.outcomeFor(severity);
 
         // the story first, then what the Pilot saved, then the damage
-        view.print("");
-        view.print(TextWrapper.wrap(outcome.text()));
-        outcome = pilotMitigates(outcome);
+        HazardReport report = new HazardReport(state);
+        String text = outcome.text();
+        outcome = pilotMitigates(outcome, report);
 
-        HazardReport report = new HazardReport(state, view);
         int oilBefore = oilAboard;
-
         outcome.applyAll(new EffectContext(state, team, this));
 
-        report.printCrewChanges(team);
-        report.printShipChanges(oilAboard - oilBefore);
+        report.addCrewChanges(team);
+        report.addShipChanges(oilAboard - oilBefore);
+        view.showPopup(new Popup(Popup.Kind.HAZARD, hazard.name(), text, report.lines()));
 
         return oilAboard;
     }
 
     // The Pilot's ability. Every pilot on the shuttle gets to change the outcome, and the
     // player is told when they've saved the hull so it reads as the ability working
-    private HazardOutcome pilotMitigates(HazardOutcome outcome) {
+    private HazardOutcome pilotMitigates(HazardOutcome outcome, HazardReport report) {
         for (AscentModifier pilot : team.ascentModifiers()) {
             HazardOutcome modified = pilot.modifyAscent(outcome);
 
             // fewer effects means the pilot stripped the hull damage out
             if (modified.effects().size() < outcome.effects().size()) {
-                view.print("  " + pilot.getName() + " (Pilot) flies them through it: the hull takes no damage.");
+                report.add(pilot.getName() + " (Pilot) flies them through it: the ship takes no damage.");
             }
             outcome = modified;
         }

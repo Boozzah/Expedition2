@@ -34,6 +34,10 @@ INVENTORY_SLOTS=8
 # percent chance of finding an item on each drill level (the Surveyor adds 7 more)
 ITEM_DROP_BASE=8
 
+# ---- Drill sites ----
+# fuel it costs to move the team to another site on the same planet (the first is free)
+SITE_MOVE_COST=15
+
 # ---- Jump events ----
 # percent chance of something happening between planets
 JUMP_EVENT_CHANCE=60
