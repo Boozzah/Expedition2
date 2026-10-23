@@ -18,6 +18,7 @@ import expedition.item.ItemTable;
 import expedition.item.MedKit;
 import expedition.ship.Inventory;
 import expedition.ship.Ship;
+import expedition.ship.ShipPart;
 import expedition.ui.ConsoleView;
 import expedition.world.DrillSite;
 import expedition.world.SiteTier;
@@ -118,14 +119,14 @@ public class DrillSessionItemTest {
     @Test
     public void drillMenuCanUseAnItemWithoutDrilling()
     {
-        state.ship().damageHull(30);
+        state.ship().damage(ShipPart.ENGINE, 30);
         bag.add(new expedition.item.RepairKit("Repair Kit", "test", 25));
         
         // 3 = use item, 1 = the Repair Kit, then 2 = ascend
         DrillSession session = session(new Surveyor("Hannah", 100, 100, 100), "3\n1\n2\n");
         session.run();
         
-        assertEquals(95, state.ship().hullPercent());
+        assertEquals(95, state.ship().part(ShipPart.ENGINE));
         assertFalse("using an item shouldn't drill a level", printed.toString().contains("Level 1:"));
     }
     

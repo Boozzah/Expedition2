@@ -72,7 +72,12 @@ final class Schema {
             + "PLANET_INDEX INTEGER NOT NULL, "
             + "TOTAL_OIL INTEGER NOT NULL, "
             + "FUEL INTEGER NOT NULL, "
+            // one column per ship part, see ShipPart
             + "HULL INTEGER NOT NULL, "
+            + "ENGINE INTEGER NOT NULL, "
+            + "EXHAUST INTEGER NOT NULL, "
+            + "PRESSURE INTEGER NOT NULL, "
+            + "WINDOWS INTEGER NOT NULL, "
             // the planet names in route order, and the item names in inventory order,
             // each seperated by ';' like the site names in PLANETS
             + "ROUTE VARCHAR(500) NOT NULL, "

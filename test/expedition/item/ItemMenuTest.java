@@ -15,6 +15,7 @@ import expedition.engine.RunState;
 import expedition.expedition.Expedition;
 import expedition.ship.Inventory;
 import expedition.ship.Ship;
+import expedition.ship.ShipPart;
 import expedition.ui.ConsoleView;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -92,13 +93,13 @@ public class ItemMenuTest {
     @Test
     public void shipItemsDontAskForACrewMember()
     {
-        ship.damageHull(30);
+        ship.damage(ShipPart.WINDOWS, 30);
         bag.add(new RepairKit("Repair Kit", "test", 25));
         
         // only one answer, there is no crew list for a Repair Kit
         menu("1\n").open(null);
         
-        assertEquals(95, ship.hullPercent());
+        assertEquals(95, ship.part(ShipPart.WINDOWS));
         assertTrue(bag.isEmpty());
     }
     

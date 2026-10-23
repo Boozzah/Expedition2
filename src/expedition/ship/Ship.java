@@ -2,37 +2,48 @@ package expedition.ship;
 
 /*
  * Ship
- * Fuel, tank capacity, hull percentage, costs/spend, and the inventory
+ * Fuel, tank capacity, the health of each ship part, costs/spend, and the inventory
  * of items carried aboard.
+ * The hull percentage the fuel cost uses is the average of the five parts, so a ship
+ * with one badly damaged part costs a bit more to fly, and one with every part worn
+ * down costs a lot more. The ship breaks when any one part gets to 0.
  */
 import expedition.engine.GameConfig;
+import java.util.EnumMap;
+import java.util.Map;
 
 public class Ship 
 {
+    // a part can only be between 0 and 100 health
+    private static final int PART_MAX = 100;
+
     private int fuel; 
     private final int tankCapacity; 
-    private int hullPercent; 
+    private final Map<ShipPart, Integer> parts = new EnumMap<>(ShipPart.class); 
     private final Inventory inventory; 
     
     public Ship(GameConfig c)
     {
         // takes value from GameConfig
         tankCapacity = c.tankCapacity(); 
-        // The ship will always start at 100% health 
-        hullPercent = 100; 
+        // The ship will always start with every part at 100% health 
+        for (ShipPart part : ShipPart.values())
+        {
+            parts.put(part, PART_MAX);
+        }
         // fuel is set in GameConfig 
         fuel = c.startingFuel();  
         // starts empty, items are found while drilling or given by hazards
         inventory = new Inventory(c.inventorySlots());
     }
 
-    // for resuming a saved run, the fuel and hull carry on from where they were.
+    // for resuming a saved run, the fuel and the parts carry on from where they were.
     // the items are added to the inventory afterwards
-    public Ship(GameConfig c, int fuel, int hullPercent)
+    public Ship(GameConfig c, int fuel, Map<ShipPart, Integer> savedParts)
     {
         this(c);
         this.fuel = fuel;
-        this.hullPercent = hullPercent;
+        parts.putAll(savedParts);
     }
 
     public int fuel()
@@ -40,9 +51,47 @@ public class Ship
         return fuel; 
     }
     
+    // the average of the five parts, used for the fuel cost of a jump
     public int hullPercent()
     {
-        return hullPercent; 
+        int total = 0;
+        for (int health : parts.values())
+        {
+            total += health;
+        }
+        return total / parts.size(); 
+    }
+    
+    public int part(ShipPart part)
+    {
+        return parts.get(part);
+    }
+    
+    // a copy, so the screens and the save can read every part without changing them
+    public Map<ShipPart, Integer> parts()
+    {
+        return new EnumMap<>(parts);
+    }
+    
+    // the ship can't fly once any part is gone, see GameEngine.checkTerminalStates
+    public boolean isBroken()
+    {
+        return parts.containsValue(0);
+    }
+    
+    // the part a Repair Kit goes to when the player doesn't pick one. On a tie the first
+    // part in the list wins, so it is always the same part for the same damage
+    public ShipPart mostDamagedPart()
+    {
+        ShipPart worst = ShipPart.HULL;
+        for (ShipPart part : ShipPart.values())
+        {
+            if (parts.get(part) < parts.get(worst))
+            {
+                worst = part;
+            }
+        }
+        return worst;
     }
     
     public Inventory inventory()
@@ -83,15 +132,18 @@ public class Ship
         fuel = Math.max(0, fuel - cost); 
     }
     
-    // takes away some of the 100% heath of the hull when the hull gets damaged but it cant go below 0 as a ship can only be between 0 and 100 health.  
-    public void damageHull(int damage)
+    // takes away some of a part's 100% health when it gets damaged but it cant go below 0 as a part can only be between 0 and 100 health.  
+    public void damage(ShipPart part, int damage)
     {
-        hullPercent = Math.max(0, hullPercent - damage); 
+        parts.put(part, Math.max(0, parts.get(part) - damage)); 
     }
     
-    // adds to the percentage of hull health as a repair 
-    public void repairHull(int repair)
+    // adds to the percentage of a part's health as a repair, and returns how much it
+    // actually went up, as a part that is nearly full can't take the whole repair
+    public int repair(ShipPart part, int repair)
     {
-        hullPercent = Math.min(100, hullPercent + repair); 
+        int before = parts.get(part);
+        parts.put(part, Math.min(PART_MAX, before + repair)); 
+        return parts.get(part) - before;
     }
 }

@@ -538,9 +538,9 @@ public class GameEngine {
             return;
         }
         
-        // hull reaches 0% hull failure
-        // ascent hazards are what wear the hull down to this
-        if (state.ship().hullPercent() <=0) {
+        // any ship part reaches 0% hull failure
+        // ascent hazards are what wear the parts down to this
+        if (state.ship().isBroken()) {
             state.endRun(EndingReason.HULL_FAILURE);
         }
     }
