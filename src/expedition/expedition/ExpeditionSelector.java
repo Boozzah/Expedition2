@@ -1,7 +1,7 @@
 /*
  * ExpeditionSelector
- * The crew selection screen: shows the roster with each member's status,
- * takes the player's 2-3 picks, and charges the stamina cost of going down
+ * The crew selection: hands the roster to the view's crew screen, checks the player's
+ * 2-3 picks, and charges the stamina cost of going down
  * returns null when too few crew are fit and the planet cannot be drilled at all
 */
 
@@ -12,6 +12,8 @@ import expedition.engine.GameConfig;
 import expedition.engine.RunState;
 import expedition.exception.QuitGameException;
 import expedition.ui.GameView;
+import expedition.ui.screen.CrewCard;
+import expedition.ui.screen.Popup;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,69 +32,34 @@ public class ExpeditionSelector {
         this.config = config;
     }
     
-    // returns the chosen expedition, or null if this planet cannot be drilled due to not enough crew
+    // returns the chosen expedition, or null if this planet cannot be drilled due to not enough crew,
+    // or the player stood the team down
     public Expedition select(RunState state) throws QuitGameException {
-        showRoster(state);
-        
         List<CrewMember> available = state.eligibleCrew();
         
         if (available.size() < MIN_CREW) {
-            view.print("");
-            if (available.isEmpty()) {
-                view.print("Nobody is fit to deploy.");
-            } else {
-                view.print("Only 1 crew member is fit to deploy.");
-            }
-            view.print("This planet cannot be drilled. You have to jump on the fuel you have.");
+            String who = available.isEmpty() ? "Nobody is fit to deploy." : "Only 1 crew member is fit to deploy.";
+            view.showPopup(Popup.info(who + " This planet cannot be drilled. You have to jump on the fuel you have."));
             return null;
         }
         
-        // chosen crew
+        // the view shows the whole crew, dead and unfit ones included, so the picks are
+        // positions in state.crew()
+        List<Integer> picks = view.chooseCrew(CrewCard.of(state.crew(), config), MIN_CREW, MAX_CREW);
+        if (picks == null) {
+            return null;
+        }
+        
+        // checked again here so a view can't send down someone who isn't fit to go
         List<CrewMember> chosen = new ArrayList<>();
-        
-        while (chosen.size() < MAX_CREW) {
-            List<CrewMember> remaining = new ArrayList<>(available);
-            remaining.removeAll(chosen);
-            
-            if (remaining.isEmpty()){
-                break;
+        for (int i : picks) {
+            CrewMember member = state.crew().get(i);
+            if (available.contains(member) && !chosen.contains(member)) {
+                chosen.add(member);
             }
-            
-            listNumbered(remaining);
-            
-            int pick;
-            if (chosen.size() >= MIN_CREW) {
-                // enough aboard to launch, so 0 becomes real answer.
-                pick = view.readInt("Choose crewmember " + (chosen.size() + 1) + ", or 0 to launch with " + chosen.size() + ": ", 0, remaining.size());
-            } else {
-                pick = view.readInt("Choose crewmember " + (chosen.size() + 1) + " of " + MAX_CREW + ": ", 1, remaining.size());
-                
-            }
-            
-            
-            // "B" undoes the last pick rather than abandoning the screen
-            if (pick == GameView.BACK) {
-                if(chosen.isEmpty()) {
-                    view.print("Nothing to go back to.");
-                } else {
-                    CrewMember removed = chosen.remove(chosen.size() -1);
-                    view.print(removed.getName() + " stood down");
-                }
-                continue;
-            }
-            
-            if (pick == 0) {
-                break;
-            }
-            
-            CrewMember member = remaining.get(pick - 1);
-            chosen.add(member);
-            view.print(" " + member.getName() + " assigned.");
-        
-            // a disabled ability due to low stamina must be stated at selection
-            if (member.fatiguedAfter(config.staminaExpeditionCost())) {
-                view.print(" " + member.getName() + " will be FATIGUED on this trip. They will be too tired to use their ability");
-            }
+        }
+        if (chosen.size() < MIN_CREW || chosen.size() > MAX_CREW) {
+            return null;
         }
         
         // The cost of going down
@@ -101,43 +68,5 @@ public class ExpeditionSelector {
         }
         
         return new Expedition(chosen);
-    }
-    
-    // ineligible crew are listed with the reason they cannot go down
-    
-    private void showRoster(RunState state) {
-        view.print("");
-        view.print("--- Crew ---");
-        for (CrewMember member : state.crew()) {
-            view.print(String.format("  %-12s %-10s Health:%-4d Stamina:%-4d Composure:%-4d %s", 
-                    member.getName(),
-                    member.getClass().getSimpleName(),
-                    member.getHealth(),
-                    member.getStamina(),
-                    member.getComposure(),
-                    statusOf(member)));
-        }
-    }
-    
-    // the crew member gives its own reason for not deploying, so the thresholds live in one place
-    private String statusOf(CrewMember member) {
-        String reason = member.ineligibleReason();
-        if (reason != null) {
-            return reason;
-        }
-        // checked after the trip's stamina cost, since that's when the ability would be used
-        if (member.fatiguedAfter(config.staminaExpeditionCost())) {
-            return "FATIGUED, ability unavailable";
-        }
-        return "READY";
-    }
-    
-    private void listNumbered(List<CrewMember> members) {
-        view.print("");
-        view.print("Select the associated number of the crewmember you want to leave your main ship and descend to the planet surface.");
-        for(int i = 0; i < members.size(); i++) {
-            CrewMember member = members.get(i);
-            view.print(" " + (i + 1) + ". " + member.getName() + "  " + statusOf(member));
-        }
     }
 }
