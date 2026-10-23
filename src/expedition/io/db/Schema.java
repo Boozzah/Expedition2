@@ -61,11 +61,15 @@ final class Schema {
             + "DROP_WEIGHT INTEGER NOT NULL, "
             + "DESCRIPTION VARCHAR(500) NOT NULL)";
     
-    // The autosave. There is only ever one saved run, in SLOT 1, but keeping a slot number
-    // means SAVED_CREW can point at it the same way HAZARD_OUTCOMES points at HAZARDS
+    // One row per saved run. The autosave is the row with AUTOSAVE set, the others are the
+    // named saves the player made. SAVED_CREW points at the slot the same way
+    // HAZARD_OUTCOMES points at HAZARDS
     static final String SAVED_RUN = 
             "CREATE TABLE SAVED_RUN ("
             + "SLOT INTEGER NOT NULL PRIMARY KEY, "
+            + "NAME VARCHAR(40) NOT NULL, "
+            + "LAST_PLAYED TIMESTAMP NOT NULL, "
+            + "AUTOSAVE BOOLEAN NOT NULL, "
             // BIGINT because the seeds are Java longs, too big for an INTEGER
             + "SEED BIGINT NOT NULL, "
             + "RNG_SEED BIGINT NOT NULL, "

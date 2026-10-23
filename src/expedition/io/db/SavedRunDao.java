@@ -1,7 +1,8 @@
 /*
  * SavedRunDao
  * Reads and writes the SAVED_RUN and SAVED_CREW tables. The only class that knows the
- * SQL for the save, so the rest of the program just deals with SavedRun objects
+ * SQL for the saves, so the rest of the program just deals with SavedRun objects.
+ * Each save is a slot, the autosave is the one slot with AUTOSAVE set
 */
 package expedition.io.db;
 
@@ -9,12 +10,15 @@ import expedition.crew.Role;
 import expedition.engine.SavedRun;
 import expedition.engine.ScoreSheet;
 import expedition.exception.DatabaseException;
+import expedition.io.SaveSlot;
 import expedition.ship.ShipPart;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -23,9 +27,6 @@ import java.util.Map;
 
 class SavedRunDao {
 
-    // there is only one save, see Schema.SAVED_RUN
-    private static final int SLOT = 1;
-
     // route and item names are stored as one string, split on this
     private static final String SEPARATOR = ";";
     // between a score line's reason and its points
@@ -33,26 +34,33 @@ class SavedRunDao {
 
     private static final String SELECT_RUN = "SELECT SEED, RNG_SEED, PLANET_INDEX, TOTAL_OIL, FUEL, HULL, ENGINE, EXHAUST, PRESSURE, WINDOWS, ROUTE, ITEMS, SCORE, OIL_DRILLED FROM SAVED_RUN WHERE SLOT = ?";
     private static final String SELECT_CREW = "SELECT NAME, ROLE, HEALTH, STAMINA, COMPOSURE, ALIVE FROM SAVED_CREW WHERE SLOT = ? ORDER BY POSITION";
-    private static final String INSERT_RUN = "INSERT INTO SAVED_RUN VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String INSERT_RUN = "INSERT INTO SAVED_RUN (SLOT, NAME, LAST_PLAYED, AUTOSAVE, SEED, RNG_SEED, PLANET_INDEX, TOTAL_OIL, FUEL, "
+            + "HULL, ENGINE, EXHAUST, PRESSURE, WINDOWS, ROUTE, ITEMS, SCORE, OIL_DRILLED) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    // the Load Game list, the most recently played first
+    private static final String SELECT_SLOTS = "SELECT SLOT, NAME, LAST_PLAYED, AUTOSAVE, PLANET_INDEX FROM SAVED_RUN ORDER BY LAST_PLAYED DESC";
+    private static final String SELECT_AUTOSAVE = "SELECT SLOT FROM SAVED_RUN WHERE AUTOSAVE = TRUE";
+    private static final String SELECT_NAMED = "SELECT SLOT FROM SAVED_RUN WHERE NAME = ? AND AUTOSAVE = FALSE";
+    // COALESCE gives 0 when there are no saves yet, so the first slot is 1
+    private static final String SELECT_LAST_SLOT = "SELECT COALESCE(MAX(SLOT), 0) FROM SAVED_RUN";
     private static final String INSERT_CREW = "INSERT INTO SAVED_CREW VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     // crew first, a SAVED_RUN row can't be deleted while SAVED_CREW rows still point at it
     private static final String DELETE_CREW = "DELETE FROM SAVED_CREW WHERE SLOT = ?";
     private static final String DELETE_RUN = "DELETE FROM SAVED_RUN WHERE SLOT = ?";
 
-    // Replaces whatever was saved before. Done as one transaction, so if the game is closed
-    // or something fails half way through, the old save is still there instead of half a new one
-    void save(SavedRun run) throws DatabaseException {
+    // Replaces whatever was saved in the slot before. Done as one transaction, so if the game is
+    // closed or something fails half way through, the old save is still there instead of half a new one
+    void save(int slot, String name, boolean autosave, SavedRun run) throws DatabaseException {
         inTransaction("Could not save the run", conn -> {
-            deleteRows(conn);
-            insertRun(conn, run);
-            insertCrew(conn, run.crew());
+            deleteRows(conn, slot);
+            insertRun(conn, slot, name, autosave, run);
+            insertCrew(conn, slot, run.crew());
         });
     }
 
-    // returns null when there is no save, which is normal before the first run
-    SavedRun load() throws DatabaseException {
+    // returns null when the slot is empty
+    SavedRun load(int slot) throws DatabaseException {
         try (PreparedStatement ps = DBManager.get().prepareStatement(SELECT_RUN)) {
-            ps.setInt(1, SLOT);
+            ps.setInt(1, slot);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) {
                     return null;
@@ -66,7 +74,7 @@ class SavedRunDao {
                         readParts(rs),
                         split(rs.getString("ROUTE")),
                         split(rs.getString("ITEMS")),
-                        loadCrew(),
+                        loadCrew(slot),
                         readScore(rs.getString("SCORE")),
                         rs.getInt("OIL_DRILLED"));
             }
@@ -75,13 +83,61 @@ class SavedRunDao {
         }
     }
 
-    // a finished run deletes its save so Resume can't bring back a run that is over
-    void delete() throws DatabaseException {
-        inTransaction("Could not delete the saved run", this::deleteRows);
+    void delete(int slot) throws DatabaseException {
+        inTransaction("Could not delete the saved run", conn -> deleteRows(conn, slot));
     }
 
-    boolean exists() throws DatabaseException {
-        return load() != null;
+    List<SaveSlot> list() throws DatabaseException {
+        List<SaveSlot> slots = new ArrayList<>();
+        try (PreparedStatement ps = DBManager.get().prepareStatement(SELECT_SLOTS);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                slots.add(new SaveSlot(
+                        rs.getInt("SLOT"),
+                        rs.getString("NAME"),
+                        rs.getTimestamp("LAST_PLAYED").toLocalDateTime(),
+                        rs.getBoolean("AUTOSAVE"),
+                        // the index starts at 0, the first planet is planet 1
+                        rs.getInt("PLANET_INDEX") + 1));
+            }
+        } catch (SQLException e) {
+            throw new DatabaseException("Could not read the saved runs", e);
+        }
+        return slots;
+    }
+
+    // the autosave's slot, or null if there isn't one yet
+    Integer autosaveSlot() throws DatabaseException {
+        return findSlot(SELECT_AUTOSAVE, null);
+    }
+
+    // the slot of the named save with this name, or null if there isn't one
+    Integer slotNamed(String name) throws DatabaseException {
+        return findSlot(SELECT_NAMED, name);
+    }
+
+    // one past the highest slot in use
+    int nextSlot() throws DatabaseException {
+        try (PreparedStatement ps = DBManager.get().prepareStatement(SELECT_LAST_SLOT);
+             ResultSet rs = ps.executeQuery()) {
+            rs.next();
+            return rs.getInt(1) + 1;
+        } catch (SQLException e) {
+            throw new DatabaseException("Could not read the saved runs", e);
+        }
+    }
+
+    private Integer findSlot(String sql, String name) throws DatabaseException {
+        try (PreparedStatement ps = DBManager.get().prepareStatement(sql)) {
+            if (name != null) {
+                ps.setString(1, name);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : null;
+            }
+        } catch (SQLException e) {
+            throw new DatabaseException("Could not read the saved runs", e);
+        }
     }
 
     // the SQL steps for one transaction, written as a lambda in save and delete
@@ -109,10 +165,10 @@ class SavedRunDao {
         }
     }
 
-    private List<SavedRun.SavedCrew> loadCrew() throws SQLException {
+    private List<SavedRun.SavedCrew> loadCrew(int slot) throws SQLException {
         List<SavedRun.SavedCrew> crew = new ArrayList<>();
         try (PreparedStatement ps = DBManager.get().prepareStatement(SELECT_CREW)) {
-            ps.setInt(1, SLOT);
+            ps.setInt(1, slot);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     crew.add(new SavedRun.SavedCrew(
@@ -128,26 +184,29 @@ class SavedRunDao {
         return crew;
     }
 
-    private void deleteRows(Connection conn) throws SQLException {
+    private void deleteRows(Connection conn, int slot) throws SQLException {
         try (PreparedStatement crew = conn.prepareStatement(DELETE_CREW);
              PreparedStatement run = conn.prepareStatement(DELETE_RUN)) {
-            crew.setInt(1, SLOT);
+            crew.setInt(1, slot);
             crew.executeUpdate();
-            run.setInt(1, SLOT);
+            run.setInt(1, slot);
             run.executeUpdate();
         }
     }
 
-    private void insertRun(Connection conn, SavedRun run) throws SQLException {
+    private void insertRun(Connection conn, int slot, String name, boolean autosave, SavedRun run) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(INSERT_RUN)) {
-            ps.setInt(1, SLOT);
-            ps.setLong(2, run.seed());
-            ps.setLong(3, run.rngSeed());
-            ps.setInt(4, run.planetIndex());
-            ps.setInt(5, run.totalOilCollected());
-            ps.setInt(6, run.fuel());
+            ps.setInt(1, slot);
+            ps.setString(2, name);
+            ps.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setBoolean(4, autosave);
+            ps.setLong(5, run.seed());
+            ps.setLong(6, run.rngSeed());
+            ps.setInt(7, run.planetIndex());
+            ps.setInt(8, run.totalOilCollected());
+            ps.setInt(9, run.fuel());
             // the part columns are in the same order as ShipPart
-            int column = 7;
+            int column = 10;
             for (ShipPart part : ShipPart.values()) {
                 ps.setInt(column++, run.parts().get(part));
             }
@@ -159,11 +218,11 @@ class SavedRunDao {
         }
     }
 
-    private void insertCrew(Connection conn, List<SavedRun.SavedCrew> crew) throws SQLException {
+    private void insertCrew(Connection conn, int slot, List<SavedRun.SavedCrew> crew) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(INSERT_CREW)) {
             for (int i = 0; i < crew.size(); i++) {
                 SavedRun.SavedCrew c = crew.get(i);
-                ps.setInt(1, SLOT);
+                ps.setInt(1, slot);
                 ps.setInt(2, i);
                 ps.setString(3, c.name());
                 ps.setString(4, c.role().name());
