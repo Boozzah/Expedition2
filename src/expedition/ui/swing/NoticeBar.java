@@ -72,7 +72,7 @@ class NoticeBar extends JComponent {
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
             int x = (getWidth() - fm.stringWidth(line)) / 2;
-            g2.drawString(line, x, PADDING + i * Draw.lineHeight(font) + fm.getAscent());
+            Draw.string(g2, line, x, PADDING + i * Draw.lineHeight(font) + fm.getAscent());
         }
         g2.dispose();
     }

@@ -139,7 +139,7 @@ class PopupBox extends JComponent {
         Rectangle area = new Rectangle(PADDING, 0, getWidth() - 2 * PADDING, 0);
         for (String line : lines) {
             int x = centred ? area.x + (area.width - fm.stringWidth(line)) / 2 : area.x;
-            g2.drawString(line, x, y + fm.getAscent());
+            Draw.string(g2, line, x, y + fm.getAscent());
             y += Draw.lineHeight(font);
         }
         return y;
