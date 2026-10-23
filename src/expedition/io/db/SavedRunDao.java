@@ -7,6 +7,7 @@ package expedition.io.db;
 
 import expedition.crew.Role;
 import expedition.engine.SavedRun;
+import expedition.engine.ScoreSheet;
 import expedition.exception.DatabaseException;
 import expedition.ship.ShipPart;
 
@@ -27,10 +28,12 @@ class SavedRunDao {
 
     // route and item names are stored as one string, split on this
     private static final String SEPARATOR = ";";
+    // between a score line's reason and its points
+    private static final String EQUALS = "=";
 
-    private static final String SELECT_RUN = "SELECT SEED, RNG_SEED, PLANET_INDEX, TOTAL_OIL, FUEL, HULL, ENGINE, EXHAUST, PRESSURE, WINDOWS, ROUTE, ITEMS FROM SAVED_RUN WHERE SLOT = ?";
+    private static final String SELECT_RUN = "SELECT SEED, RNG_SEED, PLANET_INDEX, TOTAL_OIL, FUEL, HULL, ENGINE, EXHAUST, PRESSURE, WINDOWS, ROUTE, ITEMS, SCORE, OIL_DRILLED FROM SAVED_RUN WHERE SLOT = ?";
     private static final String SELECT_CREW = "SELECT NAME, ROLE, HEALTH, STAMINA, COMPOSURE, ALIVE FROM SAVED_CREW WHERE SLOT = ? ORDER BY POSITION";
-    private static final String INSERT_RUN = "INSERT INTO SAVED_RUN VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String INSERT_RUN = "INSERT INTO SAVED_RUN VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String INSERT_CREW = "INSERT INTO SAVED_CREW VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     // crew first, a SAVED_RUN row can't be deleted while SAVED_CREW rows still point at it
     private static final String DELETE_CREW = "DELETE FROM SAVED_CREW WHERE SLOT = ?";
@@ -63,7 +66,9 @@ class SavedRunDao {
                         readParts(rs),
                         split(rs.getString("ROUTE")),
                         split(rs.getString("ITEMS")),
-                        loadCrew());
+                        loadCrew(),
+                        readScore(rs.getString("SCORE")),
+                        rs.getInt("OIL_DRILLED"));
             }
         } catch (SQLException e) {
             throw new DatabaseException("Could not read the saved run", e);
@@ -147,7 +152,9 @@ class SavedRunDao {
                 ps.setInt(column++, run.parts().get(part));
             }
             ps.setString(column++, String.join(SEPARATOR, run.route()));
-            ps.setString(column, String.join(SEPARATOR, run.items()));
+            ps.setString(column++, String.join(SEPARATOR, run.items()));
+            ps.setString(column++, writeScore(run.score()));
+            ps.setInt(column, run.oilDrilled());
             ps.executeUpdate();
         }
     }
@@ -177,6 +184,24 @@ class SavedRunDao {
             parts.put(part, rs.getInt(part.name()));
         }
         return parts;
+    }
+
+    // OIL=12;PLANETS=300
+    private String writeScore(Map<ScoreSheet.Reason, Integer> score) {
+        List<String> lines = new ArrayList<>();
+        for (Map.Entry<ScoreSheet.Reason, Integer> e : score.entrySet()) {
+            lines.add(e.getKey().name() + EQUALS + e.getValue());
+        }
+        return String.join(SEPARATOR, lines);
+    }
+
+    private Map<ScoreSheet.Reason, Integer> readScore(String joined) {
+        Map<ScoreSheet.Reason, Integer> score = new EnumMap<>(ScoreSheet.Reason.class);
+        for (String line : split(joined)) {
+            String[] parts = line.split(EQUALS);
+            score.put(ScoreSheet.Reason.valueOf(parts[0]), Integer.parseInt(parts[1]));
+        }
+        return score;
     }
 
     // an empty inventory is saved as "", which split would turn into one blank name

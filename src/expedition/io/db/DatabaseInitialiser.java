@@ -32,9 +32,10 @@ public class DatabaseInitialiser {
             createIfAbsent("HAZARDS", Schema.HAZARDS);
             createIfAbsent("HAZARD_OUTCOMES", Schema.HAZARD_OUTCOMES);
             createIfAbsent("ITEMS", Schema.ITEMS);
-            // a database from before the ship had parts has a SAVED_RUN with no part
-            // columns, which the new save can't use. Only the autosave is lost
-            dropSaveIfMissing("ENGINE");
+            // a database from before the ship had parts or the score was kept has a
+            // SAVED_RUN without those columns, which the new save can't use. Only the
+            // autosave is lost. OIL_DRILLED is the newest column, so checking it covers both
+            dropSaveIfMissing("OIL_DRILLED");
             
             // SAVED_CREW has a FK to SAVED_RUN, so it has to come second. Both start empty,
             // the first autosave fills them

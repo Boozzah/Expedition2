@@ -81,7 +81,10 @@ final class Schema {
             // the planet names in route order, and the item names in inventory order,
             // each seperated by ';' like the site names in PLANETS
             + "ROUTE VARCHAR(500) NOT NULL, "
-            + "ITEMS VARCHAR(500) NOT NULL)";
+            + "ITEMS VARCHAR(500) NOT NULL, "
+            // the score so far as REASON=points pairs, e.g. OIL=12;PLANETS=300
+            + "SCORE VARCHAR(500) NOT NULL, "
+            + "OIL_DRILLED INTEGER NOT NULL)";
     
     // One row per crew member in the save, dead ones included. POSITION keeps them in the
     // order they were in, which the seeded random crew picks depend on

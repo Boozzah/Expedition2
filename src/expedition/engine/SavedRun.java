@@ -18,7 +18,7 @@ import java.util.Map;
 
 public record SavedRun(long seed, long rngSeed, int planetIndex, int totalOilCollected,
                        int fuel, Map<ShipPart, Integer> parts, List<String> route, List<String> items,
-                       List<SavedCrew> crew) {
+                       List<SavedCrew> crew, Map<ScoreSheet.Reason, Integer> score, int oilDrilled) {
 
     // one crew member, dead ones included so the ending can still list them as lost
     public record SavedCrew(String name, Role role, int health, int stamina, int composure, boolean alive) {
@@ -27,6 +27,7 @@ public record SavedRun(long seed, long rngSeed, int planetIndex, int totalOilCol
     // copies the lists and parts so the snapshot can't change after it is taken
     public SavedRun {
         parts = Map.copyOf(parts);
+        score = Map.copyOf(score);
         route = List.copyOf(route);
         items = List.copyOf(items);
         crew = List.copyOf(crew);
