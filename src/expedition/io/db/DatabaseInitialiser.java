@@ -32,6 +32,10 @@ public class DatabaseInitialiser {
             createIfAbsent("HAZARDS", Schema.HAZARDS);
             createIfAbsent("HAZARD_OUTCOMES", Schema.HAZARD_OUTCOMES);
             createIfAbsent("ITEMS", Schema.ITEMS);
+            // a database from before the ship had parts has a SAVED_RUN with no part
+            // columns, which the new save can't use. Only the autosave is lost
+            dropSaveIfMissing("ENGINE");
+            
             // SAVED_CREW has a FK to SAVED_RUN, so it has to come second. Both start empty,
             // the first autosave fills them
             createIfAbsent("SAVED_RUN", Schema.SAVED_RUN);
@@ -73,6 +77,27 @@ public class DatabaseInitialiser {
                 ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
             rs.next();
             return rs.getInt(1) == 0;
+        }
+    }
+    
+    // Drops the two save tables if SAVED_RUN is missing a column the current save needs,
+    // so createIfAbsent builds them again with the new columns. SAVED_CREW goes first
+    // because it points at SAVED_RUN
+    private void dropSaveIfMissing(String column) throws SQLException {
+        DatabaseMetaData meta = DBManager.get().getMetaData();
+        try (ResultSet table = meta.getTables(null, null, "SAVED_RUN", null)) {
+            if (!table.next()) {
+                return;
+            }
+        }
+        try (ResultSet rs = meta.getColumns(null, null, "SAVED_RUN", column)) {
+            if (rs.next()) {
+                return;
+            }
+        }
+        try (Statement st = DBManager.get().createStatement()) {
+            st.execute("DROP TABLE SAVED_CREW");
+            st.execute("DROP TABLE SAVED_RUN");
         }
     }
     
