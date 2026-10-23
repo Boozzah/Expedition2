@@ -11,6 +11,7 @@ import expedition.engine.RunState;
 import expedition.expedition.Expedition;
 import expedition.hazard.effect.EffectContext;
 import expedition.ship.Inventory;
+import expedition.ship.ShipPart;
 import expedition.ui.GameView;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,7 +72,7 @@ public class ItemMenu {
 
         // everything an item can change, before it is used
         int fuel = state.ship().fuel();
-        int hull = state.ship().hullPercent();
+        Map<ShipPart, Integer> parts = state.ship().parts();
         int health = (target == null) ? 0 : target.getHealth();
         int stamina = (target == null) ? 0 : target.getStamina();
         int composure = (target == null) ? 0 : target.getComposure();
@@ -81,7 +82,9 @@ public class ItemMenu {
 
         String changes = "";
         changes += change(changes, "fuel", state.ship().fuel() - fuel);
-        changes += change(changes, "hull", state.ship().hullPercent() - hull);
+        for (ShipPart part : ShipPart.values()) {
+            changes += change(changes, part.label().toLowerCase(), state.ship().part(part) - parts.get(part));
+        }
         if (target != null) {
             changes += change(changes, "health", target.getHealth() - health);
             changes += change(changes, "stamina", target.getStamina() - stamina);

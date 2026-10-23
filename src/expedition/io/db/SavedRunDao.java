@@ -8,6 +8,7 @@ package expedition.io.db;
 import expedition.crew.Role;
 import expedition.engine.SavedRun;
 import expedition.exception.DatabaseException;
+import expedition.ship.ShipPart;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -15,7 +16,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 class SavedRunDao {
 
@@ -25,9 +28,9 @@ class SavedRunDao {
     // route and item names are stored as one string, split on this
     private static final String SEPARATOR = ";";
 
-    private static final String SELECT_RUN = "SELECT SEED, RNG_SEED, PLANET_INDEX, TOTAL_OIL, FUEL, HULL, ROUTE, ITEMS FROM SAVED_RUN WHERE SLOT = ?";
+    private static final String SELECT_RUN = "SELECT SEED, RNG_SEED, PLANET_INDEX, TOTAL_OIL, FUEL, HULL, ENGINE, EXHAUST, PRESSURE, WINDOWS, ROUTE, ITEMS FROM SAVED_RUN WHERE SLOT = ?";
     private static final String SELECT_CREW = "SELECT NAME, ROLE, HEALTH, STAMINA, COMPOSURE, ALIVE FROM SAVED_CREW WHERE SLOT = ? ORDER BY POSITION";
-    private static final String INSERT_RUN = "INSERT INTO SAVED_RUN VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String INSERT_RUN = "INSERT INTO SAVED_RUN VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String INSERT_CREW = "INSERT INTO SAVED_CREW VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     // crew first, a SAVED_RUN row can't be deleted while SAVED_CREW rows still point at it
     private static final String DELETE_CREW = "DELETE FROM SAVED_CREW WHERE SLOT = ?";
@@ -57,7 +60,7 @@ class SavedRunDao {
                         rs.getInt("PLANET_INDEX"),
                         rs.getInt("TOTAL_OIL"),
                         rs.getInt("FUEL"),
-                        rs.getInt("HULL"),
+                        readParts(rs),
                         split(rs.getString("ROUTE")),
                         split(rs.getString("ITEMS")),
                         loadCrew());
@@ -138,9 +141,13 @@ class SavedRunDao {
             ps.setInt(4, run.planetIndex());
             ps.setInt(5, run.totalOilCollected());
             ps.setInt(6, run.fuel());
-            ps.setInt(7, run.hullPercent());
-            ps.setString(8, String.join(SEPARATOR, run.route()));
-            ps.setString(9, String.join(SEPARATOR, run.items()));
+            // the part columns are in the same order as ShipPart
+            int column = 7;
+            for (ShipPart part : ShipPart.values()) {
+                ps.setInt(column++, run.parts().get(part));
+            }
+            ps.setString(column++, String.join(SEPARATOR, run.route()));
+            ps.setString(column, String.join(SEPARATOR, run.items()));
             ps.executeUpdate();
         }
     }
@@ -161,6 +168,15 @@ class SavedRunDao {
             }
             ps.executeBatch();
         }
+    }
+
+    // each part has a column named after it, e.g. ENGINE
+    private Map<ShipPart, Integer> readParts(ResultSet rs) throws SQLException {
+        Map<ShipPart, Integer> parts = new EnumMap<>(ShipPart.class);
+        for (ShipPart part : ShipPart.values()) {
+            parts.put(part, rs.getInt(part.name()));
+        }
+        return parts;
     }
 
     // an empty inventory is saved as "", which split would turn into one blank name

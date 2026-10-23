@@ -13,6 +13,7 @@ import expedition.exception.SaveException;
 import expedition.io.TextFileDataSource;
 import expedition.item.ItemTable;
 import expedition.ship.Ship;
+import expedition.ship.ShipPart;
 import expedition.world.Planet;
 import java.util.List;
 import org.junit.Before;
@@ -45,7 +46,8 @@ public class SaveRoundTripTest {
         state.advancePlanet(null);
 
         state.ship().spendFuel(30);
-        state.ship().damageHull(15);
+        state.ship().damage(ShipPart.PRESSURE, 15);
+        state.ship().damage(ShipPart.WINDOWS, 40);
         state.addOil(12);
         state.ship().inventory().add(items.create("First Aid Kit"));
         state.ship().inventory().add(items.create("Repair Kit"));

@@ -11,6 +11,7 @@ package expedition.expedition;
 import expedition.crew.CrewMember;
 import expedition.crew.Role;
 import expedition.engine.RunState;
+import expedition.ship.ShipPart;
 import expedition.ui.GameView;
 
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ public class HazardReport {
     private final int[] composure;
     private final boolean[] alive;
     private final int fuelBefore;
-    private final int hullBefore;
+    private final Map<ShipPart, Integer> partsBefore;
     private final Map<String, Integer> itemsBefore;
 
     // make this right before outcome.applyAll() so the snapshot is the "before"
@@ -50,7 +51,7 @@ public class HazardReport {
             alive[i] = m.isAlive();
         }
         fuelBefore = state.ship().fuel();
-        hullBefore = state.ship().hullPercent();
+        partsBefore = state.ship().parts();
         // stacked() already makes a new map, so it won't change when the inventory does
         itemsBefore = state.ship().inventory().stacked();
     }
@@ -93,13 +94,15 @@ public class HazardReport {
         return injured;
     }
 
-    // Prints one line for the oil, fuel and hull. The oil change is passed in because
+    // Prints one line for the oil, fuel and any ship part that was hit. The oil change is passed in because
     // the oil is held by whoever is carrying it, not by the ship
     public void printShipChanges(int oilChange) {
         String ship = "";
         ship += change(ship, "oil", oilChange);
         ship += change(ship, "fuel", state.ship().fuel() - fuelBefore);
-        ship += change(ship, "hull", state.ship().hullPercent() - hullBefore);
+        for (ShipPart part : ShipPart.values()) {
+            ship += change(ship, part.label().toLowerCase(), state.ship().part(part) - partsBefore.get(part));
+        }
 
         if (!ship.isEmpty()) {
             view.print("  " + ship);

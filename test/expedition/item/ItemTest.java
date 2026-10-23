@@ -12,6 +12,7 @@ import expedition.engine.GameConfig;
 import expedition.engine.RunState;
 import expedition.hazard.effect.EffectContext;
 import expedition.ship.Ship;
+import expedition.ship.ShipPart;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,14 +61,29 @@ public class ItemTest {
     }
 
     @Test
-    public void repairKitFixesTheHullButNotPast100()
+    public void repairKitFixesTheWorstPartButNotPast100()
     {
-        ship.damageHull(40);
+        ship.damage(ShipPart.HULL, 10);
+        ship.damage(ShipPart.EXHAUST, 40);
         new RepairKit("Repair Kit", "test", 25).use(ctx, null);
-        assertEquals(85, ship.hullPercent());
+        assertEquals(85, ship.part(ShipPart.EXHAUST));
+        assertEquals(90, ship.part(ShipPart.HULL));
 
         new RepairKit("Repair Kit", "test", 25).use(ctx, null);
-        assertEquals(100, ship.hullPercent());
+        assertEquals(100, ship.part(ShipPart.EXHAUST));
+    }
+
+    @Test
+    public void repairKitCanFixAChosenPart()
+    {
+        ship.damage(ShipPart.HULL, 10);
+        ship.damage(ShipPart.EXHAUST, 40);
+
+        // only 10 was missing, so only 10 of the kit's 25 is used
+        int repaired = new RepairKit("Repair Kit", "test", 25).repair(ship, ShipPart.HULL);
+        assertEquals(10, repaired);
+        assertEquals(100, ship.part(ShipPart.HULL));
+        assertEquals(60, ship.part(ShipPart.EXHAUST));
     }
 
     @Test

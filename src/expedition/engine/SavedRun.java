@@ -12,18 +12,21 @@
 package expedition.engine;
 
 import expedition.crew.Role;
+import expedition.ship.ShipPart;
 import java.util.List;
+import java.util.Map;
 
 public record SavedRun(long seed, long rngSeed, int planetIndex, int totalOilCollected,
-                       int fuel, int hullPercent, List<String> route, List<String> items,
+                       int fuel, Map<ShipPart, Integer> parts, List<String> route, List<String> items,
                        List<SavedCrew> crew) {
 
     // one crew member, dead ones included so the ending can still list them as lost
     public record SavedCrew(String name, Role role, int health, int stamina, int composure, boolean alive) {
     }
 
-    // copies the lists so the snapshot can't change after it is taken
+    // copies the lists and parts so the snapshot can't change after it is taken
     public SavedRun {
+        parts = Map.copyOf(parts);
         route = List.copyOf(route);
         items = List.copyOf(items);
         crew = List.copyOf(crew);

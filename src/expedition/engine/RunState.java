@@ -104,7 +104,7 @@ public class RunState  {
         }
         
         return new SavedRun(seed, rngSeed, planetIndex, totalOilCollected,
-                ship.fuel(), ship.hullPercent(), routeNames, itemNames, savedCrew);
+                ship.fuel(), ship.parts(), routeNames, itemNames, savedCrew);
     }
     
     // Builds a run back up from a save. The planets and items come from the game content
@@ -115,7 +115,7 @@ public class RunState  {
             route.add(findPlanet(planetPool, name));
         }
         
-        Ship ship = new Ship(config, saved.fuel(), saved.hullPercent());
+        Ship ship = new Ship(config, saved.fuel(), saved.parts());
         for (String name : saved.items()) {
             Item item = itemTable.create(name);
             if (item == null) {
