@@ -9,6 +9,7 @@ package expedition.ui;
 
 import expedition.engine.HighScore;
 import expedition.exception.QuitGameException;
+import expedition.io.SaveSlot;
 import java.util.List;
 
 public interface GameView {
@@ -31,5 +32,19 @@ public interface GameView {
 
     // Called once when the program is finished, so a window can close itself
     void close();
+
+    // Shows the saved runs, the most recently played first, and returns the one the player
+    // picks, or null to go back to the menu. A numbered list unless a view draws its own
+    default SaveSlot chooseSave(List<SaveSlot> slots) throws QuitGameException {
+        print("");
+        print("--- SAVED RUNS ---");
+        for (int i = 0; i < slots.size(); i++) {
+            SaveSlot slot = slots.get(i);
+            print(String.format("  %d) %-20s planet %d   last played %s",
+                    i + 1, slot.name(), slot.planetsReached(), slot.lastPlayedText()));
+        }
+        int pick = readInt("Choose a save: ", 1, slots.size());
+        return (pick == BACK) ? null : slots.get(pick - 1);
+    }
 }
 

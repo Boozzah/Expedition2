@@ -20,6 +20,7 @@ import expedition.item.ItemTable;
 import expedition.io.GameDataSource;
 import expedition.exception.DataLoadException;
 import expedition.exception.SaveException;
+import expedition.io.SaveSlot;
 import expedition.io.SaveStore;
 import expedition.io.ScoreStore;
 import expedition.expedition.ExpeditionSelector;
@@ -125,23 +126,32 @@ public class GameEngine {
         return new RunState(seed, ship, crew, planets, ROUTE_LENGTH, config, items);
     }
     
-    // There is only one save, so a new run will write over it at the first planet.
-    // Checks first rather than losing someone's run without warning
+    // There is only one autosave, so a new run will write over it at the first planet.
+    // Checks first rather than losing someone's run without warning. Named saves are kept
     private boolean confirmNewRun() {
-        if (!hasSave()) {
+        if (!hasAutosave()) {
             return true;
         }
-        return view.readYesNo("Starting a new run will replace your saved run. Carry on?");
+        return view.readYesNo("Starting a new run will replace the autosave. Your named saves are kept. Carry on?");
     }
     
-    // Builds the run back up from the autosave. The content is loaded fresh the same way
+    // Builds a run back up from the save the player picks. The content is loaded fresh the same way
     // a new run does it, then the save says which planets, crew stats and items to use.
     // Returns null (back to the menu) if there is no save or it can't be used
     private RunState resumeRun() throws DataLoadException {
         try {
-            SavedRun saved = saves.load();
-            if (saved == null) {
+            List<SaveSlot> slots = saves.list();
+            if (slots.isEmpty()) {
                 view.print("There is no saved run to resume.");
+                return null;
+            }
+            SaveSlot slot = view.chooseSave(slots);
+            if (slot == null) {
+                return null;
+            }
+            SavedRun saved = saves.load(slot.id());
+            if (saved == null) {
+                view.print("That save is no longer there.");
                 return null;
             }
             
@@ -169,12 +179,25 @@ public class GameEngine {
         }
     }
     
+    private boolean hasAutosave() {
+        try {
+            for (SaveSlot slot : saves.list()) {
+                if (slot.autosave()) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (SaveException e) {
+            return false;
+        }
+    }
+    
     // Saves the run each time the ship arrives at a planet (GDD P2 4: autosave at each planet).
     // checkpoint() runs even if the save fails, so the run's rolls stay the same either way
     private void autosave(RunState state) {
         SavedRun snapshot = state.checkpoint();
         try {
-            saves.save(snapshot);
+            saves.autosave(snapshot);
             view.print("Run saved.");
         } catch (SaveException e) {
             view.print("The run could not be saved: " + e.getMessage());
@@ -205,10 +228,10 @@ public class GameEngine {
         }
     }
     
-    // once a run is over there is nothing left to resume
+    // once a run is over there is nothing left to resume from the autosave
     private void deleteSave() {
         try {
-            saves.delete();
+            saves.deleteAutosave();
         } catch (SaveException e) {
             view.print("The finished run's save could not be removed: " + e.getMessage());
         }
