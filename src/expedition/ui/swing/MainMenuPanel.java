@@ -67,9 +67,7 @@ class MainMenuPanel extends JPanel {
         settings.setLocation(Assets.WIDTH - ICON_MARGIN - settings.getWidth(), ICON_TOP);
         addButton(settings, Choice.SETTINGS, onChoice);
 
-        // still Nadia's full size file, so it is shrunk here. Switch to Assets.load
-        // once she sends a 104x104 one, like the other buttons
-        ImageButton scores = new ImageButton(Assets.image("score-button.png", false), "High scores");
+        ImageButton scores = new ImageButton(Assets.load("ui/score-button.png"), "High scores");
         scores.setLocation(Assets.WIDTH - ICON_MARGIN - scores.getWidth(), ICON_TOP + ICON_STEP);
         addButton(scores, Choice.HIGH_SCORES, onChoice);
     }
