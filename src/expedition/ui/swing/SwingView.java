@@ -44,7 +44,11 @@ import expedition.io.SaveSlot;
 import expedition.ui.GameView;
 import expedition.ui.MenuChoice;
 import expedition.ui.RunControls;
+import expedition.ui.screen.Choices;
+import expedition.ui.screen.CrewCard;
+import expedition.ui.screen.PlanetInfo;
 import expedition.ui.screen.Popup;
+import expedition.ui.screen.ShipStatus;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
@@ -75,6 +79,9 @@ public class SwingView implements GameView {
     private static final String LORE_SCREEN = "lore";
     private static final String HOW_TO_PLAY_SCREEN = "howToPlay";
     private static final String LOAD_SCREEN = "load";
+    private static final String ARRIVAL_SCREEN = "arrival";
+    private static final String SHIP_SCREEN = "ship";
+    private static final String CREW_SCREEN = "crew";
 
     // the screens outside a run, which have no ☰ button
     private static final Set<String> MENU_SCREENS = Set.of(MENU_SCREEN, SCORES_SCREEN, HOW_TO_PLAY_SCREEN, LOAD_SCREEN);
@@ -120,6 +127,9 @@ public class SwingView implements GameView {
     private LoreScreen lore;
     private HowToPlayScreen howToPlay;
     private LoadScreen load;
+    private ArrivalScreen arrival;
+    private ShipScreen ship;
+    private CrewScreen crew;
     private ImageButton menuButton;
     private NoticeBar notices;
     private Overlay overlay;
@@ -277,6 +287,24 @@ public class SwingView implements GameView {
         return (answer instanceof SaveSlot slot) ? slot : null;
     }
 
+    @Override
+    public Choices.Arrival arrive(PlanetInfo planet, ShipStatus status) throws QuitGameException {
+        return (Choices.Arrival) ask(arrival, ARRIVAL_SCREEN, () -> arrival.show(planet, status), true);
+    }
+
+    @Override
+    public Choices.ShipScreen showShip(ShipStatus status) throws QuitGameException {
+        return (Choices.ShipScreen) ask(ship, SHIP_SCREEN, () -> ship.show(status), true);
+    }
+
+    // the screen hands back who is aboard, or STAND_DOWN when the player backs out
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<Integer> chooseCrew(List<CrewCard> cards, int min, int max) throws QuitGameException {
+        Object answer = ask(crew, CREW_SCREEN, () -> crew.show(cards, min, max), true);
+        return (answer == CrewScreen.STAND_DOWN) ? null : (List<Integer>) answer;
+    }
+
     // the popup goes over whatever screen is showing, and the engine waits for DONE
     @Override
     public void showPopup(Popup popup) throws QuitGameException {
@@ -399,6 +427,12 @@ public class SwingView implements GameView {
         screens.add(howToPlay, HOW_TO_PLAY_SCREEN);
         load = new LoadScreen(answers::offer, this::openSettings);
         screens.add(load, LOAD_SCREEN);
+        arrival = new ArrivalScreen(answers::offer);
+        screens.add(arrival, ARRIVAL_SCREEN);
+        ship = new ShipScreen(answers::offer);
+        screens.add(ship, SHIP_SCREEN);
+        crew = new CrewScreen(answers::offer);
+        screens.add(crew, CREW_SCREEN);
 
         frame.add(screens);
         addMenuButton();
