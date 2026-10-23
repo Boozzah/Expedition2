@@ -57,11 +57,12 @@ public class HazardReport {
     }
 
     // Prints a line for each crew member who changed. Returns the members of the team
-    // who survived but lost health, so the Doctor knows who to treat
+    // who survived but lost health, so the Doctor knows who to treat. team is null for a
+    // jump event, everyone is aboard the ship and there is no Doctor on a team to treat them
     public List<CrewMember> printCrewChanges(Expedition team) {
         List<CrewMember> crew = state.crew();
         List<CrewMember> injured = new ArrayList<>();
-        List<CrewMember> onTeam = team.livingMembers();
+        List<CrewMember> onTeam = (team == null) ? List.of() : team.livingMembers();
 
         for (int i = 0; i < crew.size(); i++) {
             CrewMember m = crew.get(i);

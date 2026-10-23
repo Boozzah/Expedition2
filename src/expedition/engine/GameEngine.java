@@ -8,6 +8,8 @@
 package expedition.engine;
 
 import expedition.crew.CrewMember;
+import expedition.event.EventTable;
+import expedition.event.JumpEvent;
 import expedition.exception.QuitGameException;
 import expedition.exception.ReturnToMenuException;
 import expedition.ship.FuelEconomy;
@@ -28,6 +30,8 @@ import expedition.expedition.Expedition;
 import expedition.world.DrillSite;
 import expedition.expedition.DrillSession;
 import expedition.expedition.AscentPhase;
+import expedition.expedition.HazardReport;
+import expedition.hazard.effect.EffectContext;
 import expedition.io.RunLogWriter;
 import expedition.hazard.HazardSet;
 import expedition.hazard.Hazard;
@@ -54,6 +58,7 @@ public class GameEngine {
     private final SaveStore saves;
     private final ScoreStore scores;
     private List<Hazard> allHazards = List.of();
+    private EventTable events = new EventTable(List.of(), 0);
     private final Long fixedSeed;
     
     public GameEngine(GameView view, GameConfig config, 
@@ -117,8 +122,9 @@ public class GameEngine {
         List<CrewMember> crew = data.loadCrew();
         List<Planet> planets = data.loadPlanets();
         
-        // load hazards
+        // load hazards and the jump events
         allHazards = data.loadHazards();
+        events = new EventTable(data.loadEvents(), config.jumpEventChance());
         
         // every item that can be found this run, used by drops and ITEM hazards
         ItemTable items = new ItemTable(data.loadItems());
@@ -156,6 +162,7 @@ public class GameEngine {
             }
             
             allHazards = data.loadHazards();
+            events = new EventTable(data.loadEvents(), config.jumpEventChance());
             ItemTable items = new ItemTable(data.loadItems());
             RunState state = RunState.restore(saved, data.loadPlanets(), items, config);
             
@@ -276,6 +283,10 @@ public class GameEngine {
             if (state.jumpNumber() > ROUTE_LENGTH) {
                 state.endRun(EndingReason.HOME);
                 
+            } else if (!state.isRunOver()) {
+                // something might happen on the way to the next planet
+                jumpEvent(state);
+                checkTerminalStates(state);
             }
         }
         reportEnding(state);
@@ -328,6 +339,28 @@ public class GameEngine {
             }
             // aboard the ship, so anyone alive can be given an item
             itemMenu.open(null);
+        }
+    }
+    
+    // GDD 9: an event on the way to the next planet. Good, bad or just something to see.
+    // Reported the same way as a hazard, by comparing the run before and after
+    private void jumpEvent(RunState state) {
+        JumpEvent event = events.roll(state.rng());
+        if (event == null) {
+            return;
+        }
+        
+        HazardReport report = new HazardReport(state, view);
+        // nobody is on a planet, so there is no team and nothing carrying oil
+        event.applyAll(new EffectContext(state, null, null));
+        int points = state.score().jumpEvent(event.points());
+        
+        view.print("");
+        view.print(TextWrapper.wrap(event.text()));
+        report.printCrewChanges(null);
+        report.printShipChanges(0);
+        if (points != 0) {
+            view.print("  " + (points > 0 ? "+" : "") + points + " points");
         }
     }
     
