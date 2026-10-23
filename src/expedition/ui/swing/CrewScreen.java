@@ -3,9 +3,10 @@
  *
  * Choosing who goes down, from Nadia's crew selection examples. The six crew stand in a
  * row with the three seat shuttle under them and a stat card on the right.
- * - Clicking someone shows their card and gives them the orange outline
- * - Clicking an empty window then puts them in the shuttle, with the yellow outline
- * - Clicking their window again takes them back out
+ * - Hovering over someone shows their card and gives them the orange outline
+ * - Clicking them puts them in the next empty window of the shuttle, and they keep the
+ *   yellow outline while they're aboard
+ * - Clicking them again (or their window) takes them back out, back to only the hover outline
  * - Anyone dead is drawn dead, and anyone who can't go says why on their card
  * GO sends the team down once there are 2 or 3 aboard.
  */
@@ -14,6 +15,7 @@ package expedition.ui.swing;
 import expedition.ui.screen.CrewCard;
 import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -71,9 +73,11 @@ class CrewScreen extends GameScreen {
     private List<CrewCard> crew = List.of();
     private int min;
     private int max;
-    // positions in the crew list: who is in each window (-1 for empty), and whose card shows
+    // positions in the crew list: who is in each window (-1 for empty), whose card shows,
+    // and who the mouse is over (-1 for nobody). The card stays on the last person hovered
     private final int[] seats = {-1, -1, -1};
     private int viewing = 0;
+    private int hovered = -1;
 
     CrewScreen(Consumer<Object> answers) {
         super(answers);
@@ -89,12 +93,24 @@ class CrewScreen extends GameScreen {
         back.addActionListener(e -> answer(STAND_DOWN));
         add(back);
 
-        addMouseListener(new MouseAdapter() {
+        MouseAdapter mouse = new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 clicked(e.getPoint());
             }
-        });
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                hover(e.getPoint());
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hover(new Point(-1, -1));
+            }
+        };
+        addMouseListener(mouse);
+        addMouseMotionListener(mouse);
     }
 
     // EDT only. Starts with an empty shuttle and the first crew member's card showing
@@ -106,6 +122,7 @@ class CrewScreen extends GameScreen {
             seats[i] = -1;
         }
         viewing = 0;
+        hovered = -1;
         update();
     }
 
@@ -120,27 +137,67 @@ class CrewScreen extends GameScreen {
         return chosen;
     }
 
-    private void clicked(Point p) {
-        // a crew member: show their card
+    // the crew member at p, or -1
+    private int crewAt(Point p) {
         for (int i = 0; i < crew.size(); i++) {
             if (crewArea(i).contains(p)) {
-                viewing = i;
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    // the mouse moved: whoever it is over gets the outline and their card shows
+    private void hover(Point p) {
+        int over = crewAt(p);
+        setCursor(Cursor.getPredefinedCursor(over >= 0 ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        if (over == hovered) {
+            return;
+        }
+        hovered = over;
+        if (over >= 0) {
+            viewing = over;
+        }
+        repaint();
+    }
+
+    private void clicked(Point p) {
+        // a crew member: in if they're out, out if they're in
+        int i = crewAt(p);
+        if (i >= 0) {
+            viewing = i;
+            toggle(i);
+            return;
+        }
+        // a window: takes whoever is in it back out
+        for (int w = 0; w < WINDOWS.length && w < max; w++) {
+            if (WINDOWS[w].distance(p) <= WINDOW_RADIUS && seats[w] >= 0) {
+                seats[w] = -1;
                 update();
                 return;
             }
         }
-        // a window: take whoever is in it out, or put the crew member being viewed in
-        for (int w = 0; w < WINDOWS.length && w < max; w++) {
-            if (WINDOWS[w].distance(p) > WINDOW_RADIUS) {
-                continue;
-            }
-            if (seats[w] >= 0) {
+    }
+
+    // Puts a crew member in the first empty window, or takes them out if they're already in.
+    // Nobody unfit can go in, their card already says why, and a full shuttle takes nobody else
+    private void toggle(int i) {
+        for (int w = 0; w < seats.length; w++) {
+            if (seats[w] == i) {
                 seats[w] = -1;
-            } else if (crew.get(viewing).canGoDown() && !aboard().contains(viewing)) {
-                seats[w] = viewing;
+                update();
+                return;
             }
-            update();
+        }
+        if (!crew.get(i).canGoDown()) {
             return;
+        }
+        for (int w = 0; w < max; w++) {
+            if (seats[w] < 0) {
+                seats[w] = i;
+                update();
+                return;
+            }
         }
     }
 
@@ -203,7 +260,7 @@ class CrewScreen extends GameScreen {
             pose = Assets.Pose.DEAD;
         } else if (isAboard) {
             pose = Assets.Pose.ABOARD;
-        } else if (i == viewing) {
+        } else if (i == hovered) {
             pose = Assets.Pose.SELECTED;
         } else {
             pose = Assets.Pose.STANDING;
