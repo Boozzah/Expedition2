@@ -46,9 +46,14 @@ import expedition.ui.MenuChoice;
 import expedition.ui.RunControls;
 import expedition.ui.screen.Choices;
 import expedition.ui.screen.CrewCard;
+import expedition.ui.screen.DrillStatus;
+import expedition.ui.screen.ItemInfo;
+import expedition.ui.screen.LevelResult;
 import expedition.ui.screen.PlanetInfo;
 import expedition.ui.screen.Popup;
 import expedition.ui.screen.ShipStatus;
+import expedition.ui.screen.SiteInfo;
+import expedition.world.PlanetArchetype;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
@@ -82,6 +87,8 @@ public class SwingView implements GameView {
     private static final String ARRIVAL_SCREEN = "arrival";
     private static final String SHIP_SCREEN = "ship";
     private static final String CREW_SCREEN = "crew";
+    private static final String SITES_SCREEN = "sites";
+    private static final String DRILL_SCREEN = "drill";
 
     // the screens outside a run, which have no ☰ button
     private static final Set<String> MENU_SCREENS = Set.of(MENU_SCREEN, SCORES_SCREEN, HOW_TO_PLAY_SCREEN, LOAD_SCREEN);
@@ -130,6 +137,14 @@ public class SwingView implements GameView {
     private ArrivalScreen arrival;
     private ShipScreen ship;
     private CrewScreen crew;
+    private SiteMapScreen sites;
+    private DrillScreen drill;
+
+    // the planet the ship is at, so the site map and drill screens can draw it. Set on the
+    // engine thread when the ship arrives
+    private volatile PlanetArchetype planetType;
+    // the ship on arrival, for how many slots the inventory has
+    private volatile ShipStatus lastShip;
     private ImageButton menuButton;
     private NoticeBar notices;
     private Overlay overlay;
@@ -289,6 +304,8 @@ public class SwingView implements GameView {
 
     @Override
     public Choices.Arrival arrive(PlanetInfo planet, ShipStatus status) throws QuitGameException {
+        planetType = planet.archetype();
+        lastShip = status;
         return (Choices.Arrival) ask(arrival, ARRIVAL_SCREEN, () -> arrival.show(planet, status), true);
     }
 
@@ -303,6 +320,44 @@ public class SwingView implements GameView {
     public List<Integer> chooseCrew(List<CrewCard> cards, int min, int max) throws QuitGameException {
         Object answer = ask(crew, CREW_SCREEN, () -> crew.show(cards, min, max), true);
         return (answer == CrewScreen.STAND_DOWN) ? null : (List<Integer>) answer;
+    }
+
+    // the site map hands back the site picked, or LEAVE
+    @Override
+    public int chooseSite(List<SiteInfo> siteList, int moveCost) throws QuitGameException {
+        Object answer = ask(sites, SITES_SCREEN, () -> sites.show(planetType, siteList, moveCost), true);
+        return (answer == SiteMapScreen.LEAVE) ? GameView.BACK : (Integer) answer;
+    }
+
+    @Override
+    public Choices.Drill drillTurn(DrillStatus status) throws QuitGameException {
+        return (Choices.Drill) ask(drill, DRILL_SCREEN, () -> drill.show(planetType, status), true);
+    }
+
+    // shown over the drill when the screen next appears, which is straight after this
+    @Override
+    public void showLevelResult(LevelResult result) {
+        SwingUtilities.invokeLater(() -> drill.levelDrilled(result));
+    }
+
+    // the hold is full: the first answer leaves the new item, the rest throw one out
+    @Override
+    public String makeRoom(String found, List<ItemInfo> hold, int capacity) throws QuitGameException {
+        List<String> options = new ArrayList<>();
+        options.add("LEAVE THE " + found.toUpperCase());
+        for (ItemInfo item : hold) {
+            options.add("THROW OUT " + item.name().toUpperCase() + " (" + item.count() + ")");
+        }
+        checkNotEdt();
+        dropOldAnswers();
+        SwingUtilities.invokeLater(() -> overlay.show(new ChoiceBox(
+                "You found a " + found + " but the hold is full (" + capacity + " items). Leave it, or throw something out for it?",
+                options, pick -> {
+                    overlay.close();
+                    answers.offer(pick);
+                })));
+        int pick = (Integer) waitForGameAnswer();
+        return (pick == 0) ? null : hold.get(pick - 1).name();
     }
 
     // the popup goes over whatever screen is showing, and the engine waits for DONE
@@ -433,6 +488,10 @@ public class SwingView implements GameView {
         screens.add(ship, SHIP_SCREEN);
         crew = new CrewScreen(answers::offer);
         screens.add(crew, CREW_SCREEN);
+        sites = new SiteMapScreen(answers::offer);
+        screens.add(sites, SITES_SCREEN);
+        drill = new DrillScreen(answers::offer, this::openDrillInventory);
+        screens.add(drill, DRILL_SCREEN);
 
         frame.add(screens);
         addMenuButton();
@@ -536,6 +595,18 @@ public class SwingView implements GameView {
         help.pack();
         help.setLocationRelativeTo(frame);
         help.setVisible(true);
+    }
+
+    // The inventory over the drill screen. Using an item answers the drill screen's question,
+    // closing it just goes back to the drill
+    private void openDrillInventory() {
+        DrillStatus status = drill.status();
+        overlay.show(new InventoryBox(status.items(), status.team(), lastShip == null ? status.items().size() : lastShip.holdCapacity(),
+                use -> {
+                    overlay.close();
+                    drill.answer(new Choices.Drill(Choices.DrillAction.USE_ITEM, use));
+                },
+                overlay::close));
     }
 
     // the gear on the menu screens
