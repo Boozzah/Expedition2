@@ -7,6 +7,7 @@
 package expedition.crew.hooks;
 import expedition.hazard.HazardOutcome;
 
+// AI assisted - Claude Code helped write this hook as part of the ascent phase
 public interface AscentModifier {
     // returns the outcome to apply instead, base itself is never changed
     HazardOutcome modifyAscent(HazardOutcome base);

@@ -29,6 +29,7 @@ public class Vein
         }
         // past the bottom still counts as going a level deeper. If it didn't, the level
         // number would repeat and give away that the vein has run out
+        // AI assisted - Claude Code found the level number repeated past the bottom and told us how to fix it
         drilled++;
         return yield;
     }

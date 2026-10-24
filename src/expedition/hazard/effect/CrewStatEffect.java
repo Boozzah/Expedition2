@@ -50,6 +50,7 @@ public record CrewStatEffect(Stat stat, int amount, Target target, int count) im
 
             // 0 health is a death. Goes through killCrew like the DEATH effect does,
             // so the rest of the crew still lose composure for witnessing it
+            // AI assisted - Claude Code, 0 health killing was our decision and it wrote the fix through killCrew
             if (member.isAlive() && member.getHealth() == 0) {
                 ctx.state().killCrew(member);
             }

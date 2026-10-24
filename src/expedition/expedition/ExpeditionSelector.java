@@ -24,6 +24,7 @@ public class ExpeditionSelector {
     private final static int MIN_CREW = 2;
     private final static int MAX_CREW = 3;
 
+    // AI assisted - Claude Code gave the step by step plan to move this class over to GameView
     private final GameView view;
     private final GameConfig config;
     

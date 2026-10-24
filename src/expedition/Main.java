@@ -40,6 +40,7 @@ public class Main {
         // Build the database tables if this is the first run. Without them there
         // is no game to start, so a failure here stops the program.
         try {
+            // AI assisted - Claude Code found the database was being seeded from itself (zero crew), so it seeds from the text files
             new DatabaseInitialiser(new TextFileDataSource()).initialise();
         } catch (DatabaseException | DataLoadException e) {
             view.print("Could not start the game - the database could not be set up:");

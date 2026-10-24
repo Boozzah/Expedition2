@@ -120,6 +120,7 @@ public abstract class CrewMember {
     // true if going down would leave this crew member fatigued. The stamina cost comes off
     // when the team launches, so checking isFatigued() at selection missed anyone the cost
     // tips under the threshold, and their ability stopped working with no warning
+    // AI assisted - Claude Code fixed the fatigue bug its headless runs found, crew selection checks after the trip's stamina cost
     public boolean fatiguedAfter(int staminaCost) {
         return stamina - staminaCost < FATIGUE_THRESHOLD;
     }

@@ -39,6 +39,7 @@ public class DrillSession implements HaulHolder
     private final DrillSite site;
     private final Expedition team;
     private final RunState state; 
+    // AI assisted - Claude Code gave the step by step plan to move this class over to GameView
     private final GameView view;
     private final GameConfig config; 
     private int haul = 0; 

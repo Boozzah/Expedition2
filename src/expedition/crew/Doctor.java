@@ -37,6 +37,7 @@ public class Doctor extends CrewMember implements FieldMedic {
     // Nobody can be healed back from the dead
     @Override
     public void treat(CrewMember target) {
+        // AI assisted - Claude Code fixed the Doctor being able to treat the dead
         if (used || !target.isAlive()) {
             return;
         }

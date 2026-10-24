@@ -19,6 +19,7 @@ public class RunLogWriter {
     // file names
     private static final String LOG_FILE = "data/runlog.txt";
     
+    // AI assisted - Claude Code gave the step by step plan to move this class over to GameView
     private final GameView view;
     
     public RunLogWriter(GameView view) {

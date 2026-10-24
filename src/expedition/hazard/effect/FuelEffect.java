@@ -6,7 +6,7 @@ package expedition.hazard.effect;
 
 import expedition.ship.Ship;
 
-// AI corrected the bugs in this code and we wrote what was recommended so we could understand it 
+// AI corrected the bugs in this code and we wrote what was recommended so we could understand it - from Project 1 (Claude)
 public record FuelEffect(int amount) implements Effect{
     
     @Override
