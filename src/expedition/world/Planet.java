@@ -6,7 +6,7 @@
  */
 package expedition.world;
 
-// AI corrected this error, found import GameConfig was missing 
+// AI corrected this error, found import GameConfig was missing - from Project 1 (Claude)
 import java.util.List; 
 import java.util.ArrayList; 
 import java.util.Random; 

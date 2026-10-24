@@ -14,7 +14,7 @@ public record Ending(EndingReason reason,
                      List<String> deadNames,
                      int totalOilCollected) { 
     
-    // AI assisted fix for an error we came across toward the end
+    // AI assisted fix for an error we came across toward the end - from Project 1 (Claude)
     // Only a run that reaches home has survivors. Every other ending kills whoever
     // was still alive - adrift, hull failure, and stranded all end with crew dead.
     public boolean anyoneSurvived() {
