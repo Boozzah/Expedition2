@@ -3,7 +3,9 @@
  *
  * Running out of fuel part way through a jump, from Nadia's example: the ship drifting in
  * space, END GAME, and BACK IN TIME to go back to the last planet for a price in points.
- * Back in time is greyed out when the last planet has no oil left to go back for.
+ * Back in time is greyed out when the last planet has no oil left to go back for. What back
+ * in time costs is explained in the ☰ menu's Help instead of on the screen, and the button's
+ * tooltip says it too.
  */
 package expedition.ui.swing;
 
@@ -23,15 +25,11 @@ class OutOfFuelScreen extends GameScreen {
     private static final int SHIP_X = 195;
     private static final int SHIP_Y = 240;
     private static final int SHIP_W = 205;
-    private static final int NOTE_TOP = 600;
 
     private final BufferedImage background = Assets.scaled(Assets.cached("backgrounds/space-planet.png"), Assets.WIDTH, Assets.HEIGHT);
     private final BufferedImage shipArt = Assets.scaledToWidth(Assets.cached("ship/spaceship.png"), SHIP_W);
     private final Font titleFont = Assets.pixelta(58f);
-    private final Font noteFont = Assets.pixelta(26f);
     private final ImageButton backInTime;
-
-    private String note = "";
 
     OutOfFuelScreen(Consumer<Object> answers) {
         super(answers);
@@ -47,11 +45,11 @@ class OutOfFuelScreen extends GameScreen {
     }
 
     // EDT only
-    void show(int fuel, int jumpCost, boolean canGoBack, int pointsCost) {
+    void show(boolean canGoBack, int pointsCost) {
         backInTime.setEnabled(canGoBack);
-        note = canGoBack
-                ? "The jump needed " + jumpCost + " fuel and the tank had " + fuel + ". Going back in time to the last planet costs " + pointsCost + " points."
-                : "The jump needed " + jumpCost + " fuel and the tank had " + fuel + ". There is no oil left on the last planet to go back for.";
+        backInTime.setToolTipText(canGoBack
+                ? "Go back to the last planet for " + pointsCost + " points"
+                : "There is no oil left on the last planet to go back for");
         repaint();
     }
 
@@ -62,7 +60,6 @@ class OutOfFuelScreen extends GameScreen {
         g2.drawImage(background, 0, 0, null);
         Draw.centred(g2, "You ran out of fuel...", titleFont, Color.WHITE, Assets.WIDTH / 2, TITLE_TOP);
         g2.drawImage(shipArt, SHIP_X, SHIP_Y, null);
-        Draw.left(g2, note, noteFont, Draw.LIGHT_BLUE, 24, NOTE_TOP);
         g2.dispose();
     }
 }

@@ -277,6 +277,18 @@ class CrewScreen extends GameScreen {
         sg.dispose();
     }
 
+    // AI assisted - Claude Code found the flatline was being stretched into a block and fixed it
+    // The heartbeat line, centred in the box. Every line is drawn at the same scale, the one
+    // that fits the tallest (full health) in the box. Stretching each one to fill the box
+    // turned the thin flatline into a solid green block
+    private void paintHealthLine(Graphics2D g2, CrewCard c, int x, int y, int w, int h) {
+        BufferedImage line = Assets.healthBar(c.health(), c.alive());
+        BufferedImage tallest = Assets.healthBar(100, true);
+        double scale = Math.min((double) w / tallest.getWidth(), (double) h / tallest.getHeight());
+        BufferedImage sized = Assets.scaled(line, Math.max(1, (int) (line.getWidth() * scale)), Math.max(1, (int) (line.getHeight() * scale)));
+        g2.drawImage(sized, x + (w - sized.getWidth()) / 2, y + (h - sized.getHeight()) / 2, null);
+    }
+
     private void paintCard(Graphics2D g2, CrewCard c) {
         Draw.centred(g2, c.name(), nameFont, Color.WHITE, CARD.x + CARD.width / 2, NAME_TOP);
         g2.setColor(CARD_EDGE);
@@ -292,7 +304,7 @@ class CrewScreen extends GameScreen {
         // health: the heartbeat line, which flattens out as health drops
         BufferedImage profile = Assets.scaled(Assets.crew(c.name(), Assets.Pose.PROFILE), ICON, (int) (ICON * 540 / 495.0));
         g2.drawImage(profile, iconX, y - 4, null);
-        g2.drawImage(Assets.scaled(Assets.healthBar(c.health(), c.alive()), barW, 46), barX, y + 4, null);
+        paintHealthLine(g2, c, barX, y + 4, barW, 46);
         Draw.centred(g2, (c.alive() ? c.health() : 0) + "% Health", statFont, CARD_TEXT, barX + barW / 2, y + 56);
         y += ROW_STEP;
 

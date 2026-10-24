@@ -65,12 +65,12 @@ import java.awt.event.WindowEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
-import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
@@ -117,9 +117,6 @@ public class SwingView implements GameView {
     // the answer from a popup's DONE button
     private static final Object POPUP_DONE = new Object();
 
-    // the in-game menu's Help window: the book plus a Close button under it
-    private static final int HELP_CLOSE_GAP = 10;
-
     // readInt gets one button per number up to this many, more than that gets a spinner
     private static final int MAX_NUMBER_BUTTONS = 10;
 
@@ -165,8 +162,8 @@ public class SwingView implements GameView {
     // thread and read on the EDT, so volatile. null outside a run
     private volatile RunControls controls;
 
-    // How to Play's pages, kept for the in-game menu's Help. Set by the engine thread
-    private volatile List<String> helpPages = List.of();
+    // the in-game menu's Help topics, title to text. Set by the engine thread
+    private volatile Map<String, String> helpTopics = Map.of();
 
     // Only touched on the EDT. True while the engine is waiting on the main menu, so
     // a menu click only counts when the engine is actually asking for one
@@ -318,8 +315,12 @@ public class SwingView implements GameView {
     }
 
     @Override
+    public void setHelpTopics(Map<String, String> topics) {
+        helpTopics = topics;
+    }
+
+    @Override
     public void showHowToPlay(List<String> pages) throws QuitGameException {
-        helpPages = pages;
         ask(howToPlay, HOW_TO_PLAY_SCREEN, () -> howToPlay.show(pages), false);
     }
 
@@ -351,14 +352,14 @@ public class SwingView implements GameView {
 
     // the site map hands back the site picked, or LEAVE
     @Override
-    public int chooseSite(List<SiteInfo> siteList, int moveCost) throws QuitGameException {
-        Object answer = ask(sites, SITES_SCREEN, () -> sites.show(planetType, siteList, moveCost), true);
+    public int chooseSite(List<SiteInfo> siteList, int moveCost, ShipStatus ship) throws QuitGameException {
+        Object answer = ask(sites, SITES_SCREEN, () -> sites.show(planetType, siteList, moveCost, ship), true);
         return (answer == SiteMapScreen.LEAVE) ? GameView.BACK : (Integer) answer;
     }
 
     @Override
     public Choices.Drill drillTurn(DrillStatus status) throws QuitGameException {
-        return (Choices.Drill) ask(drill, DRILL_SCREEN, () -> drill.show(planetType, status), true);
+        return (Choices.Drill) ask(drill, DRILL_SCREEN, () -> drill.show(status), true);
     }
 
     // shown over the drill when the screen next appears, which is straight after this
@@ -387,7 +388,7 @@ public class SwingView implements GameView {
 
     @Override
     public boolean outOfFuel(int fuel, int jumpCost, boolean canGoBack, int pointsCost) throws QuitGameException {
-        Object answer = ask(outOfFuel, OUT_OF_FUEL_SCREEN, () -> outOfFuel.show(fuel, jumpCost, canGoBack, pointsCost), true);
+        Object answer = ask(outOfFuel, OUT_OF_FUEL_SCREEN, () -> outOfFuel.show(canGoBack, pointsCost), true);
         return answer == OutOfFuelScreen.BACK_IN_TIME;
     }
 
@@ -603,8 +604,8 @@ public class SwingView implements GameView {
         }
         InGameMenu.inGame(frame, run.score(), new InGameMenu.Actions() {
             @Override
-            public void help() {
-                openHelp();
+            public Map<String, String> helpTopics() {
+                return helpTopics;
             }
 
             @Override
@@ -627,27 +628,6 @@ public class SwingView implements GameView {
                 quit();
             }
         }).setVisible(true);
-    }
-
-    // How to Play in a window over the game, from the in-game menu's Help
-    private void openHelp() {
-        JDialog help = new JDialog(frame, true);
-        help.setUndecorated(true);
-        JPanel panel = new JPanel(null);
-        panel.setBackground(Draw.NAVY);
-        BookPanel book = new BookPanel();
-        book.setLocation(0, 0);
-        book.show(helpPages);
-        panel.add(book);
-        ImageButton close = Draw.smallButton("CLOSE");
-        close.setLocation((BookPanel.WIDTH - close.getWidth()) / 2, BookPanel.HEIGHT + HELP_CLOSE_GAP);
-        close.addActionListener(e -> help.dispose());
-        panel.add(close);
-        panel.setPreferredSize(new Dimension(BookPanel.WIDTH, BookPanel.HEIGHT + 2 * HELP_CLOSE_GAP + close.getHeight()));
-        help.setContentPane(panel);
-        help.pack();
-        help.setLocationRelativeTo(frame);
-        help.setVisible(true);
     }
 
     // The inventory over the drill screen. Using an item answers the drill screen's question,

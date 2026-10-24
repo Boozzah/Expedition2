@@ -119,6 +119,7 @@ public class GameEngine {
     // then prints "Goodbye."
     
     public void run() throws QuitGameException, DataLoadException {
+        view.setHelpTopics(helpTopics());
         boolean playing = true;
         while(playing) {
             // main menu
@@ -414,6 +415,36 @@ public class GameEngine {
         view.showPopup(new Popup(Popup.Kind.EVENT, "", event.text(), report.lines()));
     }
     
+    // AI assisted - Claude Code drafted the help topics from our rules and config
+    // The in-game menu's Help, one page per topic so no screen has to explain itself.
+    // Built from the config so the numbers always match the game
+    private Map<String, String> helpTopics() {
+        Map<String, String> topics = new LinkedHashMap<>();
+        topics.put("THE GOAL", "The mothership has gone and you have " + ROUTE_LENGTH + " jumps to get home. Every jump burns "
+                + "fuel, and the only fuel out here is the oil you drill on the planets along the way. Get home with as "
+                + "much of the crew as you can.");
+        topics.put("FUEL & JUMPS", "Each jump costs " + config.jumpCostIncrement() + " more fuel than the last, and a damaged "
+                + "ship burns more. The tank holds " + config.tankCapacity() + ", so oil past that is lost. The arrival, site "
+                + "map and cockpit screens all show the next jump's cost. Press N at a planet to stay aboard and save fuel.");
+        topics.put("DRILLING", "Press Y at a planet to send a team down, then click a site to see its risk, oil and hazard "
+                + "chance. The first site is free and moving to another costs " + config.siteMoveCost() + " fuel. Each level "
+                + "down finds more oil but the hazard chance rises. The oil stays on the shuttle until you ASCEND, and the "
+                + "climb can still lose some.");
+        topics.put("THE CREW", "Send 2 or 3 crew down. Hover over someone to see their stats and click them to put them in "
+                + "the shuttle. Going down costs " + config.staminaExpeditionCost() + " stamina, and a tired crew member can't "
+                + "use their ability. Crew who stay aboard rest and recover. Each role's ability is on their card.");
+        topics.put("ITEMS & REPAIRS", "Items turn up while drilling. Click a found item to collect it, then use it from ITEMS "
+                + "on the drill or cockpit screen. The hold has " + config.inventorySlots() + " slots. SHIP shows each part, "
+                + "and a Repair Kit fixes the part you click. A part at 0% destroys the ship.");
+        topics.put("BACK IN TIME", "If a jump runs out of fuel you can END GAME, or go BACK IN TIME to the last planet and "
+                + "drill it again for " + ScoreSheet.BACK_IN_TIME_COST + " points. It's only there while that planet still "
+                + "has oil to drill.");
+        topics.put("SCORING", "Points come from the oil you drill, each planet reached, items, repairs, deep drilling, "
+                + "drilling a site dry, jump events, getting home and each crew member you bring home. Every death costs "
+                + "points. The menu shows your score so far.");
+        return topics;
+    }
+
     private void showInstructions() {
         view.showHowToPlay(HOW_TO_PLAY);
     }
@@ -476,7 +507,7 @@ public class GameEngine {
             
             int moveCost = firstSite ? 0 : config.siteMoveCost();
             List<DrillSite> sites = planet.sites();
-            int pick = view.chooseSite(SiteInfo.of(sites), moveCost);
+            int pick = view.chooseSite(SiteInfo.of(sites), moveCost, ShipStatus.of(state, config));
             if (pick == GameView.BACK) {
                 break;
             }

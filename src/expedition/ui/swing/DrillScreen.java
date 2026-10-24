@@ -1,17 +1,15 @@
 /*
  * DrillScreen
  *
- * Drilling, from Nadia's drill sketches. Laid out round the drill in the middle:
+ * Drilling, from Nadia's drill sketches and her cave, drill and barrel art:
  * - top left: the fuel gauge and the level, "Level: 3/9" if a Geologist can see the bottom
  * - top: the risk of the next level, the next jump's cost and the chance of an item
  * - left: an ID card for each of the team, with their health, stamina and composure
- * - bottom left: the barrel of oil hauled so far, and ITEMS to open the inventory
- * - the team stands either side of the drill, click the drill to go down a level
- * - bottom right: OTHER SITE back to the site map, ASCEND to fly back to the ship
+ * - middle: the drill, click it to go down a level. Its hose runs into the oil barrel,
+ *   which fills up as the haul does. ITEMS under the cards opens the inventory
+ * - right: the team, then OTHER SITE back to the site map, ASCEND to fly back to the ship
  * After a level the oil and points float up over the drill, and anything found shows
  * in a bubble, which goes into the inventory when clicked.
- *
- * Nadia hasn't drawn the drill, the barrel or the items yet, so they are drawn here.
  */
 package expedition.ui.swing;
 
@@ -20,7 +18,6 @@ import expedition.ui.screen.CrewCard;
 import expedition.ui.screen.DrillStatus;
 import expedition.ui.screen.ItemInfo;
 import expedition.ui.screen.LevelResult;
-import expedition.world.PlanetArchetype;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -40,7 +37,8 @@ import javax.swing.Timer;
 
 class DrillScreen extends GameScreen {
 
-    private static final float BACKGROUND_DIM = 0.45f;
+    // the cave is darkened a little so the white text stands out
+    private static final float BACKGROUND_DIM = 0.2f;
 
     private static final int LEVEL_TOP = 120;
     private static final int INFO_X = 300;
@@ -55,26 +53,29 @@ class DrillScreen extends GameScreen {
     private static final Color CARD_FILL = new Color(0x5D6D7B);
     private static final Color CARD_EDGE = new Color(0x3E4A56);
 
-    private static final Rectangle BARREL = new Rectangle(40, 540, 120, 160);
-    private static final Rectangle DRILL = new Rectangle(560, 190, 160, 360);
-    private static final int CREW_BOTTOM = 600;
+    // Nadia's drill keeps its shape at this size, and the end of its hose (its bottom left
+    // corner) meets the barrel's right side
+    private static final Rectangle DRILL = new Rectangle(400, 210, 416, 430);
+    private static final Rectangle BARREL = new Rectangle(300, 490, 100, 150);
+    private static final int CREW_BOTTOM = 550;
     private static final int CREW_HEIGHT = 190;
-    private static final int[] CREW_X = {430, 770, 880};
+    private static final int[] CREW_X = {875, 975, 1075};
 
     // the oil and points float up from here and fade
-    private static final int FLOAT_X = 455;
-    private static final int FLOAT_TOP = 240;
+    private static final int FLOAT_X = 640;
+    private static final int FLOAT_TOP = 100;
     private static final int FLOAT_MS = 2600;
     private static final int FLOAT_STEP_MS = 40;
     // where found items' bubbles sit, beside the drill
-    private static final Point[] BUBBLES = {new Point(800, 250), new Point(895, 200), new Point(895, 310)};
+    private static final Point[] BUBBLES = {new Point(900, 250), new Point(990, 190), new Point(1080, 250)};
     private static final int BUBBLE = 76;
 
     private static final Color HEALTH = new Color(0x4CC24C);
     private static final Color STAMINA = new Color(0x00E5FF);
     private static final Color COMPOSURE = new Color(0x8FB8FF);
     private static final Color BAR_BACK = new Color(0x2E3A46);
-    private static final Color OIL = new Color(0x141414);
+    // a lighter red than Draw.DANGER, so it reads on the dark box
+    private static final Color SPILL = new Color(0xFF6B5E);
 
     private final Font levelFont = Assets.pixelta(42f);
     private final Font infoFont = Assets.pixelta(28f);
@@ -87,7 +88,7 @@ class DrillScreen extends GameScreen {
     private final ImageButton items;
     private final Timer floatTimer;
 
-    private BufferedImage background;
+    private final BufferedImage background = Assets.scaled(Assets.cached("backgrounds/cave.png"), Assets.WIDTH, Assets.HEIGHT);
     private DrillStatus status;
     private LevelResult result;
     private int floatMs = FLOAT_MS;
@@ -99,13 +100,13 @@ class DrillScreen extends GameScreen {
         gauge.setLocation(24, 14);
         add(gauge);
 
-        ImageButton drill = new ImageButton(drillArt(), "Click to drill down a level");
+        ImageButton drill = new ImageButton(Assets.scaled(Assets.cached("drill/drill.png"), DRILL.width, DRILL.height), "Click to drill down a level");
         drill.setLocation(DRILL.x, DRILL.y);
         drill.addActionListener(e -> answer(Choices.Drill.of(Choices.DrillAction.DRILL)));
         add(drill);
 
         items = Draw.longButton("ITEMS", 170, 62, 38f);
-        items.setLocation(BARREL.x + BARREL.width + 24, BARREL.y + BARREL.height - 70);
+        items.setLocation(CARD_X + (CARD_W - 170) / 2, BARREL.y + BARREL.height - 62);
         items.addActionListener(e -> {
             if (isWaiting()) {
                 openInventory.run();
@@ -154,10 +155,7 @@ class DrillScreen extends GameScreen {
     }
 
     // EDT only
-    void show(PlanetArchetype archetype, DrillStatus status) {
-        if (archetype != null) {
-            background = Assets.planet(archetype);
-        }
+    void show(DrillStatus status) {
         // a new site starts with no oil yet, the bubbles from the last one have gone
         if (this.status != null && !this.status.siteName().equals(status.siteName())) {
             bubbles.clear();
@@ -190,11 +188,9 @@ class DrillScreen extends GameScreen {
             return;
         }
         Graphics2D g2 = (Graphics2D) g.create();
-        if (background != null) {
-            paintBackground(g2, background);
-            g2.setColor(new Color(0, 0, 0, (int) (255 * BACKGROUND_DIM)));
-            g2.fillRect(0, 0, Assets.WIDTH, Assets.HEIGHT);
-        }
+        paintBackground(g2, background);
+        g2.setColor(new Color(0, 0, 0, (int) (255 * BACKGROUND_DIM)));
+        g2.fillRect(0, 0, Assets.WIDTH, Assets.HEIGHT);
 
         String level = "Level: " + status.nextLevel();
         if (status.levelsLeft() != DrillStatus.UNKNOWN) {
@@ -255,31 +251,32 @@ class DrillScreen extends GameScreen {
         g2.drawImage(sprite, CREW_X[i] - sprite.getWidth() / 2, CREW_BOTTOM - sprite.getHeight(), null);
     }
 
+    // AI assisted - Claude Code swapped the drawn barrel and drill for Nadia's art
     // The barrel fills up as the haul does. Full means the tank has no room for more, and
     // anything past that would spill
     private void paintBarrel(Graphics2D g2) {
-        Graphics2D b = (Graphics2D) g2.create();
-        b.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         int oil = status.haul() + status.oilAboard();
         int space = Math.max(1, status.tankCapacity() - status.fuel());
         double full = Math.min(1, (double) oil / space);
+        g2.drawImage(Assets.scaled(Assets.barrel(full), BARREL.width, BARREL.height), BARREL.x, BARREL.y, null);
 
-        b.setColor(new Color(0x6E7B87));
-        b.fillRoundRect(BARREL.x, BARREL.y, BARREL.width, BARREL.height, 30, 30);
-        int inner = (int) ((BARREL.height - 30) * full);
-        b.setColor(OIL);
-        b.fillRect(BARREL.x + 10, BARREL.y + BARREL.height - 15 - inner, BARREL.width - 20, inner);
-        b.setColor(new Color(0x3E4A56));
-        b.setStroke(new BasicStroke(4));
-        b.drawRoundRect(BARREL.x, BARREL.y, BARREL.width, BARREL.height, 30, 30);
-        b.drawLine(BARREL.x, BARREL.y + 45, BARREL.x + BARREL.width, BARREL.y + 45);
-        b.drawLine(BARREL.x, BARREL.y + BARREL.height - 45, BARREL.x + BARREL.width, BARREL.y + BARREL.height - 45);
-        b.dispose();
-
-        Draw.centred(g2, oil + " oil", barrelFont, Color.WHITE, BARREL.x + BARREL.width / 2, BARREL.y - 34);
+        Draw.centred(g2, oil + " oil", barrelFont, Color.WHITE, BARREL.x + BARREL.width / 2, BARREL.y - 48);
         if (status.spill() > 0) {
-            Draw.centred(g2, status.spill() + " would spill", Assets.pixelta(20f), Draw.DANGER, BARREL.x + BARREL.width / 2, BARREL.y - 8);
+            paintSpill(g2, status.spill() + " would spill");
         }
+    }
+
+    // the spill warning on a dark box, red on its own was hard to read on the grey cave
+    private void paintSpill(Graphics2D g2, String text) {
+        Font font = Assets.pixelta(22f);
+        int w = g2.getFontMetrics(font).stringWidth(text) + 16;
+        int centre = BARREL.x + BARREL.width / 2;
+        int top = BARREL.y - 10;
+        g2.setColor(new Color(0x0A1424));
+        g2.fillRoundRect(centre - w / 2, top - 2, w, 28, 10, 10);
+        g2.setColor(SPILL);
+        g2.drawRoundRect(centre - w / 2, top - 2, w, 28, 10, 10);
+        Draw.centred(g2, text, font, SPILL, centre, top);
     }
 
     private void paintBubbles(Graphics2D g2) {
@@ -312,35 +309,5 @@ class DrillScreen extends GameScreen {
         Draw.centred(f, "+" + result.oil() + " oil", floatFont, new Color(0x7CFC7C), FLOAT_X, FLOAT_TOP - rise);
         Draw.centred(f, "+" + result.points() + " points", floatFont, new Color(0xF5D53A), FLOAT_X, FLOAT_TOP + 44 - rise);
         f.dispose();
-    }
-
-    // a drill rig: two posts and a bar, with the striped bit going down into the ground
-    private static BufferedImage drillArt() {
-        BufferedImage img = new BufferedImage(DRILL.width, DRILL.height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = img.createGraphics();
-        Color frame = new Color(0x8C969F);
-        Color dark = new Color(0x3E4A56);
-        g.setColor(frame);
-        g.fillRect(0, 0, 16, DRILL.height);
-        g.fillRect(DRILL.width - 16, 0, 16, DRILL.height);
-        g.fillRect(0, 0, DRILL.width, 20);
-        g.setColor(dark);
-        g.fillRect(DRILL.width / 2 - 6, 20, 12, 60);
-
-        int top = 80;
-        int bottom = DRILL.height - 20;
-        int[] xs = {24, DRILL.width - 24, DRILL.width / 2};
-        int[] ys = {top, top, bottom};
-        g.setColor(new Color(0xB8C2CC));
-        g.fillPolygon(xs, ys, 3);
-        g.setColor(dark);
-        // the spiral, as stripes across the bit getting narrower towards the point
-        for (int y = top + 20; y < bottom - 10; y += 26) {
-            double t = (double) (y - top) / (bottom - top);
-            int half = (int) ((DRILL.width / 2 - 24) * (1 - t));
-            g.fillRect(DRILL.width / 2 - half, y, 2 * half, 6);
-        }
-        g.dispose();
-        return img;
     }
 }

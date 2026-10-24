@@ -15,6 +15,7 @@
  */
 package expedition.ui.swing;
 
+import expedition.ship.ShipPart;
 import expedition.world.PlanetArchetype;
 import java.awt.Font;
 import java.awt.FontFormatException;
@@ -37,6 +38,9 @@ final class Assets {
 
     // the stat bar art has 10 segments
     private static final int BAR_SEGMENTS = 10;
+
+    // the oil barrel is drawn empty plus 8 levels of oil
+    private static final int BARREL_LEVELS = 8;
 
     // the health line changes at these percentages
     private static final int HEALTH_HIGH = 60;
@@ -127,6 +131,24 @@ final class Assets {
     // planets share the same view
     static BufferedImage planet(PlanetArchetype archetype) {
         return cached("planets/" + archetype.name().toLowerCase() + ".png");
+    }
+
+    // the planet seen from above with its three drill sites marked, for the site map
+    static BufferedImage siteMap(PlanetArchetype archetype) {
+        return cached("sites/" + archetype.name().toLowerCase() + ".png");
+    }
+
+    // just the red outline of a damaged part, cut to sit exactly on top of ship/spaceship.png
+    static BufferedImage damaged(ShipPart part) {
+        return cached("ship/damaged-" + part.name().toLowerCase() + ".png");
+    }
+
+    // AI assisted - Claude Code
+    // the oil barrel with as much oil in it as the fraction full, 0 to 1. Any oil at all
+    // shows at least the first level, so the player can see something went in
+    static BufferedImage barrel(double full) {
+        int level = (int) Math.ceil(Math.max(0, Math.min(1, full)) * BARREL_LEVELS);
+        return cached("drill/barrel-" + level + ".png");
     }
 
     // the cyan composure/fatigue bar with as many segments filled as the stat, rounded

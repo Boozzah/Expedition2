@@ -1,10 +1,10 @@
 /*
  * ItemIcons
  *
- * Small pictures for the items in the hold. There is no item art yet, so each one is
- * drawn here in blocky shapes to sit with the pixel art: a wrench for the Repair Kit,
- * a cross for the First Aid Kit, a can for the White Monster and so on. Any item without
- * its own picture gets its first letter. Swap these for Nadia's art once it is drawn.
+ * Small pictures for the items in the hold. The Repair Kit (scrap metal), Caffeine, First
+ * Aid Kit and White Monster use Nadia's art. The Sensory Toy and Condensed Oil don't have
+ * art yet, so they are drawn here in blocky shapes to sit with the pixel art. Any other
+ * item gets its first letter.
  */
 package expedition.ui.swing;
 
@@ -25,22 +25,9 @@ final class ItemIcons {
         int p = Math.max(1, size / 16);
         String name = itemName.toLowerCase();
 
-        if (name.contains("repair")) {
-            BufferedImage wrench = Assets.scaledToHeight(Assets.cached("ui/wrench.png"), size - 2 * p);
-            g.drawImage(wrench, (size - wrench.getWidth()) / 2, p, null);
-        } else if (name.contains("first aid")) {
-            box(g, p, 2, 3, 12, 10, new Color(0xF2F2F2));
-            box(g, p, 7, 4, 2, 8, new Color(0xD93A32));
-            box(g, p, 4, 7, 8, 2, new Color(0xD93A32));
-        } else if (name.contains("monster")) {
-            box(g, p, 5, 1, 6, 14, new Color(0xEDEDED));
-            box(g, p, 5, 1, 6, 1, new Color(0x9A9A9A));
-            box(g, p, 6, 5, 1, 6, new Color(0x4CC24C));
-            box(g, p, 9, 5, 1, 6, new Color(0x4CC24C));
-            box(g, p, 7, 6, 2, 2, new Color(0x4CC24C));
-        } else if (name.contains("caffeine")) {
-            box(g, p, 3, 6, 5, 4, new Color(0xF2F2F2));
-            box(g, p, 8, 6, 5, 4, new Color(0x8B5A2B));
+        String art = artFor(name);
+        if (art != null) {
+            drawArt(g, Assets.cached(art), size, p);
         } else if (name.contains("sensory") || name.contains("toy")) {
             box(g, p, 7, 2, 2, 12, new Color(0xF5D53A));
             box(g, p, 2, 7, 12, 2, new Color(0xF5D53A));
@@ -56,6 +43,32 @@ final class ItemIcons {
         }
         g.dispose();
         return img;
+    }
+
+    // AI assisted - Claude Code
+    // Nadia's picture for an item, or null if she hasn't drawn it
+    private static String artFor(String name) {
+        if (name.contains("repair")) {
+            return "items/repair-kit.png";
+        }
+        if (name.contains("first aid")) {
+            return "items/first-aid-kit.png";
+        }
+        if (name.contains("monster")) {
+            return "items/white-monster.png";
+        }
+        if (name.contains("caffeine")) {
+            return "items/caffeine.png";
+        }
+        return null;
+    }
+
+    // fits the art inside the square with a small margin, keeping its shape, centred
+    private static void drawArt(Graphics2D g, BufferedImage art, int size, int margin) {
+        int room = size - 2 * margin;
+        BufferedImage fitted = art.getWidth() >= art.getHeight()
+                ? Assets.scaledToWidth(art, room) : Assets.scaledToHeight(art, room);
+        g.drawImage(fitted, (size - fitted.getWidth()) / 2, (size - fitted.getHeight()) / 2, null);
     }
 
     private static void box(Graphics2D g, int p, int x, int y, int w, int h, Color colour) {
