@@ -34,6 +34,12 @@ abstract class GameScreen extends JPanel {
         waiting = true;
     }
 
+    // EDT only. The engine has stopped asking, e.g. the run was left from the in-game menu,
+    // so a late click or the cockpit's lever timer can't answer a question nobody asked
+    void stopWaiting() {
+        waiting = false;
+    }
+
     // EDT only. True while the engine is waiting on this screen
     boolean isWaiting() {
         return waiting;
