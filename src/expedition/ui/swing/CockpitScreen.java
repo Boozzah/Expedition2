@@ -39,6 +39,7 @@ class CockpitScreen extends GameScreen {
     private static final int GAUGE_X = 1088;
     private static final int GAUGE_Y = 585;
     private static final int HINT_TOP = 40;
+    private static final int INVENTORY_W = 84;
 
     private static final Color JUMP_TEXT = new Color(0xB8322F);
     // how long the pulled lever shows before the jump goes
@@ -64,8 +65,8 @@ class CockpitScreen extends GameScreen {
         gauge.setLocation(GAUGE_X, GAUGE_Y);
         add(gauge);
 
-        items = Draw.longButton("ITEMS", 170, 58, 36f);
-        items.setLocation(122, 412);
+        items = Draw.inventoryButton(INVENTORY_W);
+        items.setLocation(COST_BOX.x + (COST_BOX.width - INVENTORY_W) / 2, COST_BOX.y - items.getHeight() - 28);
         items.addActionListener(e -> {
             if (isWaiting() && !pulled) {
                 openInventory.run();
@@ -145,6 +146,7 @@ class CockpitScreen extends GameScreen {
         }
 
         paintLever(g2);
+        Draw.inventoryLabel(g2, items, "ITEMS", costFont);
         g2.dispose();
     }
 
