@@ -14,6 +14,7 @@ import java.util.Random;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+// AI assisted - Claude Code wrote this test, we reviewed it and ran it
 public class EventTableTest {
 
     private JumpEvent event(String text, int weight) {

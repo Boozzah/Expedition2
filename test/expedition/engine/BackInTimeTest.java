@@ -24,6 +24,7 @@ import java.util.List;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+// AI assisted - Claude Code wrote this test, we reviewed it and ran it
 public class BackInTimeTest {
 
     // only the autosave is used in this run
