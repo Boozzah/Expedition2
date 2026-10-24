@@ -56,6 +56,7 @@ import expedition.ui.screen.ShipStatus;
 import expedition.ui.screen.SiteInfo;
 import expedition.world.PlanetArchetype;
 import java.awt.CardLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
@@ -256,6 +257,7 @@ public class SwingView implements GameView {
             waitForAnswer();
         }
 
+        dropOldAnswers();
         SwingUtilities.invokeLater(() -> {
             // a fresh screen for whatever comes after the menu
             text.clear();
@@ -263,7 +265,12 @@ public class SwingView implements GameView {
             this.canResume = canResume;
             menuWaiting = true;
         });
-        return (MenuChoice) waitIgnoringMenu();
+        // anything that isn't a menu choice was a late click from the run that just ended
+        Object answer;
+        do {
+            answer = waitIgnoringMenu();
+        } while (!(answer instanceof MenuChoice));
+        return (MenuChoice) answer;
     }
 
     // shows the scores screen and waits until the player clicks Back
@@ -288,10 +295,21 @@ public class SwingView implements GameView {
         this.controls = controls;
     }
 
+    // Main Menu from the in-game menu can leave the run while a popup, a choice box or the
+    // inventory is still open, or while the cockpit lever is being pulled. Left there, the
+    // box would sit over the main menu and its answer would reach the menu's question
     @Override
     public void runEnded() {
         this.controls = null;
-        SwingUtilities.invokeLater(() -> menuButton.setVisible(false));
+        SwingUtilities.invokeLater(() -> {
+            menuButton.setVisible(false);
+            overlay.close();
+            for (Component screen : screens.getComponents()) {
+                if (screen instanceof GameScreen gameScreen) {
+                    gameScreen.stopWaiting();
+                }
+            }
+        });
     }
 
     @Override
