@@ -4,6 +4,7 @@
  * The menu that the ☰ button opens during a run, from Nadia's sketch. It sits over the
  * game and swaps between pages:
  * - MENU: the score so far, then Help, Save Game, Save & Quit and Close
+ * - HELP: a button for each topic, which opens a page explaining that part of the game
  * - SAVE & QUIT: Quit to Menu, Quit to Desktop, or Close to go back
  * - SAVE GAME: a box to type the save's name in
  * The gear on the main menu opens the same kind of window with the Settings page, which
@@ -23,12 +24,16 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
@@ -44,7 +49,8 @@ class InGameMenu extends JDialog {
 
     // what the in-game menu's buttons do, filled in by SwingView
     interface Actions {
-        void help();
+        // the Help topics, title to text
+        Map<String, String> helpTopics();
 
         // returns a message saying how the save went
         String save(String name);
@@ -67,14 +73,22 @@ class InGameMenu extends JDialog {
     private static final int WIDTH = 560;
     private static final int TITLE_TOP = 30;
     private static final int NOTE_TOP = 120;
-    private static final int NOTE_HEIGHT = 80;
+    private static final int NOTE_GAP = 20;
     private static final int BUTTON_STEP = 114;
     private static final int SIDE_MARGIN = 40;
+    // the room the save name box takes under the text
+    private static final int NAME_ROOM = 70;
     private static final int BOTTOM_MARGIN = 30;
 
     private static final float TITLE_SIZE = 80f;
     private static final float NOTE_SIZE = 28f;
     private static final float BUTTON_TEXT_SIZE = 56f;
+
+    // the Help topics are smaller buttons, two to a row
+    private static final int TOPIC_W = 230;
+    private static final int TOPIC_H = 62;
+    private static final int TOPIC_GAP = 14;
+    private static final float TOPIC_TEXT_SIZE = 28f;
 
     // the ☰ icon, a square the same size as the help and settings buttons
     private static final int ICON_SIZE = 64;
@@ -83,6 +97,9 @@ class InGameMenu extends JDialog {
 
     private final BufferedImage buttonImage = Assets.load("menu-button.png");
     private final Font buttonFont = Assets.pixelta(BUTTON_TEXT_SIZE);
+
+    // where the last page's text ended, for a page that adds its own parts under it
+    private int noteBottom;
 
     private InGameMenu(JFrame owner) {
         super(owner, true);
@@ -103,7 +120,6 @@ class InGameMenu extends JDialog {
     static InGameMenu inGame(JFrame owner, int score, Actions actions) {
         InGameMenu menu = new InGameMenu(owner);
         menu.showMain(score, actions);
-        menu.setLocationRelativeTo(owner);
         return menu;
     }
 
@@ -113,7 +129,6 @@ class InGameMenu extends JDialog {
         menu.showPage("SETTINGS", "Sound settings are coming in a later version.", List.of(
                 new Option("QUIT TO DESKTOP", quitToDesktop),
                 new Option("CLOSE", menu::dispose)));
-        menu.setLocationRelativeTo(owner);
         return menu;
     }
 
@@ -121,10 +136,37 @@ class InGameMenu extends JDialog {
         // Telling the player what saving keeps: the save is made when the ship reaches a
         // planet, so anything since then (like oil being hauled) isn't in it
         showPage("MENU", "Score so far: " + score, List.of(
-                new Option("HELP", actions::help),
+                new Option("HELP", () -> showTopics(score, actions)),
                 new Option("SAVE GAME", () -> showSaveName(score, actions)),
                 new Option("SAVE & QUIT", () -> showSaveAndQuit(score, actions)),
                 new Option("CLOSE", this::dispose)));
+    }
+
+    // AI assisted - Claude Code made Help a page per topic
+    // The Help topics two to a row, then BACK to the menu
+    private void showTopics(int score, Actions actions) {
+        JPanel panel = buildPage("HELP", "Pick a topic.", List.of());
+        BufferedImage topicImage = Assets.scaled(buttonImage, TOPIC_W, TOPIC_H);
+        Font topicFont = Assets.pixelta(TOPIC_TEXT_SIZE);
+        List<String> titles = new ArrayList<>(actions.helpTopics().keySet());
+        int left = (WIDTH - 2 * TOPIC_W - TOPIC_GAP) / 2;
+        int top = noteBottom + NOTE_GAP;
+        for (int i = 0; i < titles.size(); i++) {
+            String title = titles.get(i);
+            ImageButton b = new ImageButton(topicImage, title, topicFont, TEXT);
+            b.setLocation(left + (i % 2) * (TOPIC_W + TOPIC_GAP), top + (i / 2) * (TOPIC_H + TOPIC_GAP));
+            b.addActionListener(e -> showPage(title, actions.helpTopics().get(title),
+                    List.of(new Option("BACK", () -> showTopics(score, actions)))));
+            panel.add(b);
+        }
+        int rows = (titles.size() + 1) / 2;
+        int backTop = top + rows * (TOPIC_H + TOPIC_GAP) + 10;
+        ImageButton back = new ImageButton(buttonImage, "BACK", buttonFont, TEXT);
+        back.setLocation((WIDTH - buttonImage.getWidth()) / 2, backTop);
+        back.addActionListener(e -> showMain(score, actions));
+        panel.add(back);
+        panel.setPreferredSize(new Dimension(WIDTH, backTop + BUTTON_STEP + BOTTOM_MARGIN));
+        display(panel);
     }
 
     private void showSaveAndQuit(int score, Actions actions) {
@@ -167,44 +209,59 @@ class InGameMenu extends JDialog {
         // Enter saves too
         name.addActionListener(e -> save.run());
 
-        JPanel panel = showPage("SAVE GAME", "Name this save:", List.of(
+        JPanel panel = buildPage("SAVE GAME", "Name this save:", List.of(
                 new Option("SAVE", save),
                 new Option("CLOSE", () -> showMain(score, actions))));
-        name.setBounds(SIDE_MARGIN, NOTE_TOP + NOTE_HEIGHT - 10, WIDTH - 2 * SIDE_MARGIN, 56);
+        name.setBounds(SIDE_MARGIN, noteBottom + 10, WIDTH - 2 * SIDE_MARGIN, 56);
         panel.add(name);
         // pushes the buttons down to make room for the name box
         for (Component c : panel.getComponents()) {
             if (c instanceof ImageButton) {
-                c.setLocation(c.getX(), c.getY() + 60);
+                c.setLocation(c.getX(), c.getY() + NAME_ROOM);
             }
         }
-        panel.setPreferredSize(new Dimension(WIDTH, panel.getPreferredSize().height + 60));
-        pack();
-        setLocationRelativeTo(getOwner());
+        panel.setPreferredSize(new Dimension(WIDTH, panel.getPreferredSize().height + NAME_ROOM));
+        display(panel);
         name.requestFocusInWindow();
     }
 
-    // Swaps the window to a page with a title, a line of text and a column of buttons.
-    // Returns the panel so a page can add its own parts
-    private JPanel showPage(String title, String note, List<Option> options) {
+    // AI assisted - Claude Code fixed the text being cut off by measuring the wrapped lines
+    // Swaps the window to a page with a title, some text and a column of buttons
+    private void showPage(String title, String note, List<Option> options) {
+        display(buildPage(title, note, options));
+    }
+
+    // A page with a title, some text and a column of buttons. The text gets as much height
+    // as it needs, so a long message isn't cut off. It isn't shown yet, so a page can add
+    // its own parts before display() sizes the window to it
+    private JPanel buildPage(String title, String note, List<Option> options) {
         JPanel panel = new JPanel(null);   // placed by hand, like the main menu
         panel.setBackground(BACKGROUND);
         panel.setBorder(BorderFactory.createLineBorder(TEXT, 3));
 
         JLabel titleLabel = new JLabel(title, SwingConstants.CENTER);
-        titleLabel.setFont(Assets.pixelta(TITLE_SIZE));
+        titleLabel.setFont(fitted(title, TITLE_SIZE, WIDTH - 2 * SIDE_MARGIN));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setBounds(0, TITLE_TOP, WIDTH, (int) TITLE_SIZE);
         panel.add(titleLabel);
 
-        JLabel noteLabel = new JLabel("<html><div style='text-align:center'>" + note + "</div></html>", SwingConstants.CENTER);
-        noteLabel.setFont(Assets.pixelta(NOTE_SIZE));
-        noteLabel.setForeground(TEXT);
-        noteLabel.setBounds(SIDE_MARGIN, NOTE_TOP, WIDTH - 2 * SIDE_MARGIN, NOTE_HEIGHT);
-        panel.add(noteLabel);
+        // the text is wrapped to the width in Pixelta, and gets as many lines as it needs
+        int noteWidth = WIDTH - 2 * SIDE_MARGIN;
+        Font noteFont = Assets.pixelta(NOTE_SIZE);
+        int lines = Math.max(1, Draw.wrap(note, panel.getFontMetrics(noteFont), noteWidth).size());
+        int noteHeight = lines * Draw.lineHeight(noteFont);
+        JComponent noteText = new JComponent() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Draw.paragraph((Graphics2D) g, note, noteFont, TEXT, new Rectangle(0, 0, getWidth(), getHeight()));
+            }
+        };
+        noteText.setBounds(SIDE_MARGIN, NOTE_TOP, noteWidth, noteHeight);
+        panel.add(noteText);
+        noteBottom = NOTE_TOP + noteHeight;
 
         int x = (WIDTH - buttonImage.getWidth()) / 2;
-        int top = NOTE_TOP + NOTE_HEIGHT + 10;
+        int top = noteBottom + NOTE_GAP;
         for (int i = 0; i < options.size(); i++) {
             Option option = options.get(i);
             ImageButton b = new ImageButton(buttonImage, option.label(), buttonFont, TEXT);
@@ -215,10 +272,31 @@ class InGameMenu extends JDialog {
 
         int height = top + options.size() * BUTTON_STEP + BOTTOM_MARGIN;
         panel.setPreferredSize(new Dimension(WIDTH, height));
+        return panel;
+    }
+
+    // Shows a finished page and centres the window over the game once it has its final
+    // size. Sizing a page and then growing it left the HELP page hanging off the bottom
+    private void display(JPanel panel) {
         setContentPane(panel);
         pack();
-        setLocationRelativeTo(getOwner());
-        return panel;
+        Rectangle game = getOwner().getBounds();
+        int x = game.x + (game.width - getWidth()) / 2;
+        int y = Math.max(game.y, game.y + (game.height - getHeight()) / 2);
+        setLocation(x, y);
+    }
+
+    // the title font, a size down at a time until the title fits the width
+    private static Font fitted(String title, float size, int width) {
+        Font font = Assets.pixelta(size);
+        JLabel probe = new JLabel(title);
+        probe.setFont(font);
+        while (probe.getPreferredSize().width > width && size > 30f) {
+            size -= 4f;
+            font = Assets.pixelta(size);
+            probe.setFont(font);
+        }
+        return font;
     }
 
     // Three light bars on a navy square with a light border, drawn with square

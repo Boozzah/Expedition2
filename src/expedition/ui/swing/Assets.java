@@ -143,6 +143,7 @@ final class Assets {
         return cached("ship/damaged-" + part.name().toLowerCase() + ".png");
     }
 
+    // AI assisted - Claude Code
     // the oil barrel with as much oil in it as the fraction full, 0 to 1. Any oil at all
     // shows at least the first level, so the player can see something went in
     static BufferedImage barrel(double full) {

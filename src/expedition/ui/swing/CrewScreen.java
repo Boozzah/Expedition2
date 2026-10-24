@@ -277,6 +277,7 @@ class CrewScreen extends GameScreen {
         sg.dispose();
     }
 
+    // AI assisted - Claude Code found the flatline was being stretched into a block and fixed it
     // The heartbeat line, centred in the box. Every line is drawn at the same scale, the one
     // that fits the tallest (full health) in the box. Stretching each one to fill the box
     // turned the thin flatline into a solid green block

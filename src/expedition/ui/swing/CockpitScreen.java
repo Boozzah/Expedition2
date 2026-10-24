@@ -103,6 +103,7 @@ class CockpitScreen extends GameScreen {
         return ship;
     }
 
+    // AI assisted - Claude Code
     // the lever shows pulled down, then the jump goes
     private void pullLever() {
         pulled = true;

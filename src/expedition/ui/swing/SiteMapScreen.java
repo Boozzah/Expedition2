@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+// AI assisted - Claude Code laid the site map out on Nadia's planet and box art and added the fuel and next jump lines
 class SiteMapScreen extends GameScreen {
 
     // answered when the player leaves the planet
@@ -198,6 +199,7 @@ class SiteMapScreen extends GameScreen {
         Draw.centred(g2, cost, slotFont, Draw.LIGHT_BLUE, COST_SLOT.x + COST_SLOT.width / 2, COST_SLOT.y + 6);
     }
 
+    // AI assisted - Claude Code
     // The fuel the ship has and what the next jump costs, at the bottom of the box. If moving
     // here would leave less than the jump needs, that line goes orange to warn the player
     private void paintFuel(Graphics2D g2) {

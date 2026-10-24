@@ -95,6 +95,11 @@ public interface GameView {
     default void runEnded() {
     }
 
+    // The help topics, title to text, for a view that has its own Help. The console
+    // doesn't, it has How to Play
+    default void setHelpTopics(Map<String, String> topics) {
+    }
+
     // --- the screens of a run ---
 
     // Arriving at a planet: go down, stay aboard, or look at the ship first
@@ -209,8 +214,9 @@ public interface GameView {
     }
 
     // Picks a site to drill. moveCost is the fuel it costs to move to one, 0 for the first
-    // site on a planet. Returns its position in the list, or BACK to leave the planet
-    default int chooseSite(List<SiteInfo> sites, int moveCost) throws QuitGameException {
+    // site on a planet. ship is there so the player can see their fuel and the next jump's
+    // cost before spending fuel on a move. Returns its position in the list, or BACK to leave
+    default int chooseSite(List<SiteInfo> sites, int moveCost, ShipStatus ship) throws QuitGameException {
         print("");
         print("--- Drill sites ---");
         for (int i = 0; i < sites.size(); i++) {
@@ -220,6 +226,7 @@ public interface GameView {
                     : "  CLOSED";
             print("  " + (i + 1) + ". " + s.name() + detail);
         }
+        print("Fuel: " + ship.fuel() + "/" + ship.tankCapacity() + "   Next jump: " + ship.nextJumpCost() + " fuel");
         if (moveCost > 0) {
             print("Moving the team to a site costs " + moveCost + " fuel. B leaves the planet.");
         } else {

@@ -45,6 +45,7 @@ final class ItemIcons {
         return img;
     }
 
+    // AI assisted - Claude Code
     // Nadia's picture for an item, or null if she hasn't drawn it
     private static String artFor(String name) {
         if (name.contains("repair")) {

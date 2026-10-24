@@ -138,6 +138,7 @@ class ShipScreen extends GameScreen {
         g2.dispose();
     }
 
+    // AI assisted - Claude Code cut Nadia's damaged part outlines to sit on the ship art
     private BufferedImage outline(ShipPart part) {
         return outlines.computeIfAbsent(part, p -> Assets.scaled(Assets.damaged(p), SHIP.width, SHIP.height));
     }

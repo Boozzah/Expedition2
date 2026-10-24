@@ -74,6 +74,8 @@ class DrillScreen extends GameScreen {
     private static final Color STAMINA = new Color(0x00E5FF);
     private static final Color COMPOSURE = new Color(0x8FB8FF);
     private static final Color BAR_BACK = new Color(0x2E3A46);
+    // a lighter red than Draw.DANGER, so it reads on the dark box
+    private static final Color SPILL = new Color(0xFF6B5E);
 
     private final Font levelFont = Assets.pixelta(42f);
     private final Font infoFont = Assets.pixelta(28f);
@@ -249,6 +251,7 @@ class DrillScreen extends GameScreen {
         g2.drawImage(sprite, CREW_X[i] - sprite.getWidth() / 2, CREW_BOTTOM - sprite.getHeight(), null);
     }
 
+    // AI assisted - Claude Code swapped the drawn barrel and drill for Nadia's art
     // The barrel fills up as the haul does. Full means the tank has no room for more, and
     // anything past that would spill
     private void paintBarrel(Graphics2D g2) {
@@ -257,10 +260,23 @@ class DrillScreen extends GameScreen {
         double full = Math.min(1, (double) oil / space);
         g2.drawImage(Assets.scaled(Assets.barrel(full), BARREL.width, BARREL.height), BARREL.x, BARREL.y, null);
 
-        Draw.centred(g2, oil + " oil", barrelFont, Color.WHITE, BARREL.x + BARREL.width / 2, BARREL.y - 34);
+        Draw.centred(g2, oil + " oil", barrelFont, Color.WHITE, BARREL.x + BARREL.width / 2, BARREL.y - 48);
         if (status.spill() > 0) {
-            Draw.centred(g2, status.spill() + " would spill", Assets.pixelta(20f), Draw.DANGER, BARREL.x + BARREL.width / 2, BARREL.y - 8);
+            paintSpill(g2, status.spill() + " would spill");
         }
+    }
+
+    // the spill warning on a dark box, red on its own was hard to read on the grey cave
+    private void paintSpill(Graphics2D g2, String text) {
+        Font font = Assets.pixelta(22f);
+        int w = g2.getFontMetrics(font).stringWidth(text) + 16;
+        int centre = BARREL.x + BARREL.width / 2;
+        int top = BARREL.y - 10;
+        g2.setColor(new Color(0x0A1424));
+        g2.fillRoundRect(centre - w / 2, top - 2, w, 28, 10, 10);
+        g2.setColor(SPILL);
+        g2.drawRoundRect(centre - w / 2, top - 2, w, 28, 10, 10);
+        Draw.centred(g2, text, font, SPILL, centre, top);
     }
 
     private void paintBubbles(Graphics2D g2) {
