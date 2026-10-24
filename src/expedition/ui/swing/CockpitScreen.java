@@ -6,7 +6,8 @@
  * lights go from red to green once JUMP is pressed, so the player knows the lever is ready.
  * ITEMS opens the inventory first, for Condensed Oil when the fuel is short.
  *
- * Nadia is drawing the lever pulled down. Until then the lever's red handle slides down here.
+ * Pulling the lever swaps to Nadia's picture of the lever pulled down, and the jump goes
+ * a moment later.
  */
 package expedition.ui.swing;
 
@@ -33,18 +34,18 @@ class CockpitScreen extends GameScreen {
     private static final Point JUMP = new Point(642, 605);
     private static final int JUMP_RADIUS = 100;
     private static final Rectangle LEVER = new Rectangle(993, 428, 50, 182);
-    private static final int LEVER_TRAVEL = 120;
     private static final Point[] LIGHTS = {new Point(137, 653), new Point(207, 653), new Point(280, 653)};
     private static final int LIGHT_RADIUS = 18;
     private static final int GAUGE_X = 1088;
     private static final int GAUGE_Y = 585;
     private static final int HINT_TOP = 40;
 
-    private static final Color LEVER_RED = new Color(0xF0524F);
     private static final Color JUMP_TEXT = new Color(0xB8322F);
-    private static final int PULL_MS = 25;
+    // how long the pulled lever shows before the jump goes
+    private static final int PULLED_MS = 500;
 
     private final BufferedImage background = Assets.scaled(Assets.cached("backgrounds/inside-ship.png"), Assets.WIDTH, Assets.HEIGHT);
+    private final BufferedImage pulledBackground = Assets.scaled(Assets.cached("backgrounds/inside-ship-pulled.png"), Assets.WIDTH, Assets.HEIGHT);
     private final Font costFont = Assets.pixelta(26f);
     private final Font jumpFont = Assets.pixelta(76f);
     private final Font pullFont = Assets.pixelta(30f);
@@ -54,9 +55,8 @@ class CockpitScreen extends GameScreen {
 
     private ShipStatus ship;
     private boolean armed = false;
-    // how far down the lever has been pulled, 0 to LEVER_TRAVEL
-    private int pulled = 0;
-    private Timer pull;
+    // true once the lever is pulled, while the jump is about to go
+    private boolean pulled = false;
 
     // openInventory is how SwingView puts the inventory over this screen
     CockpitScreen(Consumer<Object> answers, Runnable openInventory) {
@@ -67,7 +67,7 @@ class CockpitScreen extends GameScreen {
         items = Draw.longButton("ITEMS", 170, 58, 36f);
         items.setLocation(122, 412);
         items.addActionListener(e -> {
-            if (isWaiting() && pulled == 0) {
+            if (isWaiting() && !pulled) {
                 openInventory.run();
             }
         });
@@ -76,7 +76,7 @@ class CockpitScreen extends GameScreen {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (!isWaiting() || pulled > 0) {
+                if (!isWaiting() || pulled) {
                     return;
                 }
                 if (JUMP.distance(e.getPoint()) <= JUMP_RADIUS) {
@@ -93,7 +93,7 @@ class CockpitScreen extends GameScreen {
     void show(ShipStatus ship) {
         this.ship = ship;
         armed = false;
-        pulled = 0;
+        pulled = false;
         gauge.setFuel(ship.fuel(), ship.tankCapacity());
         items.setEnabled(!ship.items().isEmpty());
         repaint();
@@ -103,17 +103,13 @@ class CockpitScreen extends GameScreen {
         return ship;
     }
 
-    // the handle slides down, then the jump goes
+    // the lever shows pulled down, then the jump goes
     private void pullLever() {
-        pull = new Timer(PULL_MS, e -> {
-            pulled = Math.min(LEVER_TRAVEL, pulled + LEVER_TRAVEL / 8);
-            repaint();
-            if (pulled >= LEVER_TRAVEL) {
-                pull.stop();
-                answer(Choices.Jump.JUMP);
-            }
-        });
-        pull.start();
+        pulled = true;
+        repaint();
+        Timer jump = new Timer(PULLED_MS, e -> answer(Choices.Jump.JUMP));
+        jump.setRepeats(false);
+        jump.start();
     }
 
     @Override
@@ -123,7 +119,7 @@ class CockpitScreen extends GameScreen {
             return;
         }
         Graphics2D g2 = (Graphics2D) g.create();
-        g2.drawImage(background, 0, 0, null);
+        g2.drawImage(pulled ? pulledBackground : background, 0, 0, null);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         String hint = armed ? "Now pull the lever" : "Press JUMP, then pull the lever";
@@ -151,23 +147,19 @@ class CockpitScreen extends GameScreen {
         g2.dispose();
     }
 
-    // the art's lever is covered by one drawn here, so it can move
+    // PULL down the lever in Nadia's art, and a white outline once JUMP has armed it
     private void paintLever(Graphics2D g2) {
-        Rectangle handle = new Rectangle(LEVER.x, LEVER.y + pulled, LEVER.width, LEVER.height);
-        // the slot the handle slides in
-        g2.setColor(Color.BLACK);
-        g2.fillRoundRect(LEVER.x + 4, LEVER.y + 160, LEVER.width - 8, LEVER.height, 30, 30);
-        g2.setColor(armed ? LEVER_RED : LEVER_RED.darker());
-        g2.fillRoundRect(handle.x, handle.y, handle.width, handle.height, 46, 60);
-        if (armed && pulled == 0) {
+        if (pulled) {
+            return;
+        }
+        if (armed) {
             g2.setColor(new Color(255, 255, 255, 140));
             g2.setStroke(new BasicStroke(4));
-            g2.drawRoundRect(handle.x - 4, handle.y - 4, handle.width + 8, handle.height + 8, 50, 64);
+            g2.drawRoundRect(LEVER.x - 6, LEVER.y - 6, LEVER.width + 12, LEVER.height + 12, 50, 64);
         }
-        // PULL down the handle, one letter under the other
         String word = "PULL";
         for (int i = 0; i < word.length(); i++) {
-            Draw.centred(g2, String.valueOf(word.charAt(i)), pullFont, JUMP_TEXT, handle.x + handle.width / 2, handle.y + 30 + i * 32);
+            Draw.centred(g2, String.valueOf(word.charAt(i)), pullFont, JUMP_TEXT, LEVER.x + LEVER.width / 2, LEVER.y + 30 + i * 32);
         }
     }
 }

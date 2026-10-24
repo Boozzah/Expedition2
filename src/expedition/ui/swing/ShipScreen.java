@@ -4,8 +4,8 @@
  * The ship's health, from Nadia's example: the ship in the middle, a caution box for each
  * of the five parts round the edge, REPAIR at the top and OK at the bottom.
  *
- * A damaged part's box goes red, and that part of the ship glows red, as Nadia asked
- * instead of a separate repair screen. REPAIR asks which part to fix, then clicking a
+ * A damaged part's box goes red, and that part of the ship gets Nadia's red outline, as
+ * she asked instead of a separate repair screen. REPAIR asks which part to fix, then clicking a
  * box fixes it with a Repair Kit. Clicking a box straight away does the same.
  * If there are no Repair Kits the engine says so.
  */
@@ -15,7 +15,6 @@ import expedition.ship.ShipPart;
 import expedition.ui.screen.Choices;
 import expedition.ui.screen.ItemInfo;
 import expedition.ui.screen.ShipStatus;
-import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
@@ -42,26 +41,17 @@ class ShipScreen extends GameScreen {
 
     // where each part's box is, round the edge like Nadia's example
     private static final Map<ShipPart, Rectangle> BOXES = new EnumMap<>(ShipPart.class);
-    // roughly where each part is on the ship art, for the red glow when it is damaged
-    private static final Map<ShipPart, Rectangle> AREAS = new EnumMap<>(ShipPart.class);
     static {
         BOXES.put(ShipPart.HULL, new Rectangle(45, 38, BOX_SIZE, BOX_SIZE));
         BOXES.put(ShipPart.ENGINE, new Rectangle(45, 490, BOX_SIZE, BOX_SIZE));
         BOXES.put(ShipPart.EXHAUST, new Rectangle(1046, 38, BOX_SIZE, BOX_SIZE));
         BOXES.put(ShipPart.PRESSURE, new Rectangle(1046, 265, BOX_SIZE, BOX_SIZE));
         BOXES.put(ShipPart.WINDOWS, new Rectangle(1046, 490, BOX_SIZE, BOX_SIZE));
-
-        AREAS.put(ShipPart.HULL, new Rectangle(330, 270, 330, 190));
-        AREAS.put(ShipPart.ENGINE, new Rectangle(265, 280, 90, 180));
-        AREAS.put(ShipPart.EXHAUST, new Rectangle(215, 290, 60, 160));
-        AREAS.put(ShipPart.PRESSURE, new Rectangle(570, 280, 260, 110));
-        AREAS.put(ShipPart.WINDOWS, new Rectangle(580, 295, 360, 50));
     }
 
-    private static final Color GLOW = new Color(255, 30, 30);
-    private static final float MAX_GLOW = 0.6f;
-
     private final BufferedImage shipArt = Assets.scaled(Assets.cached("ship/spaceship.png"), SHIP.width, SHIP.height);
+    // Nadia's red outline for each part, the same size as the ship so it sits on top of it
+    private final Map<ShipPart, BufferedImage> outlines = new EnumMap<>(ShipPart.class);
     private final BufferedImage boxArt = Assets.scaled(Assets.cached("ui/repair-box.png"), BOX_SIZE, BOX_SIZE);
     private final Font labelFont = Assets.pixelta(46f);
     private final Font smallLabelFont = Assets.pixelta(38f);
@@ -131,7 +121,9 @@ class ShipScreen extends GameScreen {
 
         for (ShipPart part : ShipPart.values()) {
             int health = ship.parts().get(part);
-            paintGlow(g2, AREAS.get(part), health);
+            if (health < 100) {
+                g2.drawImage(outline(part), SHIP.x, SHIP.y, null);
+            }
             paintBox(g2, part, BOXES.get(part), health);
         }
 
@@ -146,17 +138,8 @@ class ShipScreen extends GameScreen {
         g2.dispose();
     }
 
-    // the more damaged the part, the stronger the red
-    private void paintGlow(Graphics2D g2, Rectangle area, int health) {
-        if (health >= 100) {
-            return;
-        }
-        float strength = MAX_GLOW * (100 - health) / 100f;
-        Graphics2D glow = (Graphics2D) g2.create();
-        glow.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, strength));
-        glow.setColor(GLOW);
-        glow.fillOval(area.x, area.y, area.width, area.height);
-        glow.dispose();
+    private BufferedImage outline(ShipPart part) {
+        return outlines.computeIfAbsent(part, p -> Assets.scaled(Assets.damaged(p), SHIP.width, SHIP.height));
     }
 
     private void paintBox(Graphics2D g2, ShipPart part, Rectangle box, int health) {
