@@ -7,6 +7,7 @@
  */
 package expedition.expedition;
 
+// AI assisted - Claude Code wrote this for the ascent phase so oil effects work while the oil is on the shuttle
 public interface HaulHolder {
     // takes a percentage of the oil the team is carrying
     void reduceHaulByPercent(int percent);

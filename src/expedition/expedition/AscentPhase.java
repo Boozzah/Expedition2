@@ -20,6 +20,7 @@ import expedition.world.Planet;
 
 import java.util.List;
 
+// AI assisted - Claude Code helped write the ascent phase, we reviewed the diff and reformatted the constructor
 public class AscentPhase implements HaulHolder {
 
     private final Expedition team;

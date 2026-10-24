@@ -94,6 +94,7 @@ public class Expedition {
         for(CrewMember member : members) {
             // asks the crew member if they're fatigued rather than checking a number here,
             // so the fatigue rule only lives in one place (CrewMember)
+            // AI assisted - Claude Code found this checked stamina >= 50 instead of isFatigued() and told us how to fix it
             if (member.isAlive() && type.isInstance(member) && !member.isFatigued()) {
                 found.add(type.cast(member));
             }

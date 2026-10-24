@@ -14,6 +14,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 
+// AI assisted - Claude Code suggested ConsoleView as an adapter over ConsoleUI and InputValidator, we typed it in ourselves
 public class ConsoleView implements GameView {
 
     private final ConsoleUI ui;

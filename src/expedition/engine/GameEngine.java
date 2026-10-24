@@ -85,6 +85,7 @@ public class GameEngine {
             "Points come from oil, planets, items, repairs, deep drilling and getting the crew home. Press the menu button "
                     + "or Esc at any time to save the game, get help or quit.");
     
+    // AI assisted - Claude Code gave the step by step plan to move this class over to GameView
     private final GameView view;
     private final GameConfig config;
     private final GameDataSource data;

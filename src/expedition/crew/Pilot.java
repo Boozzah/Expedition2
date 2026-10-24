@@ -14,6 +14,7 @@ import expedition.hazard.effect.HullEffect;
 import java.util.ArrayList;
 import java.util.List;
 
+// AI assisted - Claude Code helped write the Pilot ability as part of the ascent phase
 public class Pilot extends CrewMember implements AscentModifier{
     public Pilot(String name, int health, int stamina, int composure) {
         super(name, health, stamina, composure);

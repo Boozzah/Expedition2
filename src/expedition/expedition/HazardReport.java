@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+// AI assisted - Claude Code moved the hazard report into this class so the ascent could reuse it
 public class HazardReport {
 
     private final RunState state;

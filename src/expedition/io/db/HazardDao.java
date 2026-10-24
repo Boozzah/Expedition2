@@ -21,6 +21,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+// AI assisted - Claude Code explained how the DAO classes should work and gave a pseudocode outline, we typed it in ourselves.
+// It also traced the compile errors from our typing slips when we first copied this in
 public class HazardDao {
 
     private static final String INSERT_HAZARD = "INSERT INTO HAZARDS (NAME, HAZARD_SET) VALUES (?, ?)";

@@ -123,6 +123,7 @@ public class SwingView implements GameView {
     private static final int MAX_NUMBER_BUTTONS = 10;
 
     // filled on the EDT by button clicks, emptied by the engine thread
+    // AI assisted - Claude Code's first swing-shell attempt, we rejected its look but kept this threading idea
     private final BlockingQueue<Object> answers = new LinkedBlockingQueue<>();
 
     // Only used on the engine thread. True when text has been printed since the

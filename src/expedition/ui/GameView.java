@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+// AI assisted - Claude Code gave a step by step plan for GameView and ConsoleView, we typed them in ourselves
 public interface GameView {
     // returned by readInt when the player asks to go back a step
     int BACK = Integer.MIN_VALUE;

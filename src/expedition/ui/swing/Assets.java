@@ -59,6 +59,7 @@ final class Assets {
     }
 
     // Loads an image at its file size, for art that is already window sized (backgrounds)
+    // AI assisted - Claude Code told us how to load Nadia's sprites into the game and recommended making their sizes consistent
     static BufferedImage load(String name) {
         URL url = Assets.class.getResource("assets/" + name);
         if (url == null) {
