@@ -31,6 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+// AI assisted - Claude Code wrote this test, we reviewed it and ran it
 public class DrillSessionItemTest {
     
     // a crew member who always finds something, so the test doesnt depend on an 8% roll

@@ -7,7 +7,7 @@
 **COMP603 / ENSE600 — Software Development Project 2**
 2026 Semester 2 · Two-person team (Adam, Nadia)
 
-*Version 2.0. This document does not restate the game design — [LongWayHome_GDD.md](LongWayHome_GDD.md) remains the authority on rules, tuning and narrative. This covers only what changes for Project 2: the GUI, the database, the deferred features, and the plan to land them.*
+*Version 2.0. This document does not restate the game design — the Project 1 GDD (submitted with Project 1) remains the authority on rules, tuning and narrative. This covers only what changes for Project 2: the GUI, the database, the deferred features, and the plan to land them.*
 
 ---
 
