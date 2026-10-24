@@ -58,6 +58,7 @@ class DrillScreen extends GameScreen {
     private static final Rectangle DRILL = new Rectangle(400, 210, 416, 430);
     private static final Rectangle BARREL = new Rectangle(300, 490, 100, 150);
     private static final int CREW_BOTTOM = 550;
+    private static final int INVENTORY_W = 100;
     private static final int CREW_HEIGHT = 190;
     private static final int[] CREW_X = {875, 975, 1075};
 
@@ -105,8 +106,8 @@ class DrillScreen extends GameScreen {
         drill.addActionListener(e -> answer(Choices.Drill.of(Choices.DrillAction.DRILL)));
         add(drill);
 
-        items = Draw.longButton("ITEMS", 170, 62, 38f);
-        items.setLocation(CARD_X + (CARD_W - 170) / 2, BARREL.y + BARREL.height - 62);
+        items = Draw.inventoryButton(INVENTORY_W);
+        items.setLocation(CARD_X + (CARD_W - INVENTORY_W) / 2, BARREL.y + 20);
         items.addActionListener(e -> {
             if (isWaiting()) {
                 openInventory.run();
@@ -162,7 +163,6 @@ class DrillScreen extends GameScreen {
         }
         this.status = status;
         gauge.setFuel(status.fuel(), status.tankCapacity());
-        items.setLabelText("ITEMS (" + itemCount() + ")");
         if (floatMs < FLOAT_MS) {
             floatTimer.restart();
         }
@@ -211,6 +211,7 @@ class DrillScreen extends GameScreen {
         }
 
         paintBarrel(g2);
+        Draw.inventoryLabel(g2, items, "ITEMS (" + itemCount() + ")", hintFont);
         Draw.centred(g2, "Click to drill", hintFont, Color.WHITE, DRILL.x + DRILL.width / 2, DRILL.y - 30);
         paintBubbles(g2);
         paintFloatingResult(g2);

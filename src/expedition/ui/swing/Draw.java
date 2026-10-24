@@ -142,6 +142,18 @@ final class Draw {
         return new ImageButton(art, label, Assets.pixelta(textSize), textColour);
     }
 
+    // AI assisted - Claude Code
+    // Nadia's cardboard box, the button that opens the inventory. The screen writes
+    // ITEMS and the count under it
+    static ImageButton inventoryButton(int width) {
+        return new ImageButton(Assets.scaledToWidth(Assets.cached("ui/inventory-button.png"), width), "Inventory");
+    }
+
+    // the label under the inventory box, centred on it
+    static void inventoryLabel(Graphics2D g, ImageButton box, String text, Font font) {
+        centred(g, text, font, Color.WHITE, box.getX() + box.getWidth() / 2, box.getY() + box.getHeight() + 2);
+    }
+
     // the small grey BACK / NEXT button in the bottom right of Nadia's screens
     static ImageButton smallButton(String label) {
         return button("ui/small-button.png", 136, 78, label, 50f, Color.WHITE);
