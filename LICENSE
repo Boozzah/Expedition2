@@ -1,0 +1,22 @@
+Copyright (c) 2026 Adam Boyce and Nadia Meriouli. All rights reserved.
+
+Expedition (Long Way Home) was made as coursework for COMP603 Program Design and
+Construction at Auckland University of Technology. The repository is public so the
+work can be viewed. It is not open source.
+
+You may view the code and the art in this repository. You may not copy, modify,
+distribute, or reuse any part of it, including the source code, the art, the game
+data and the documents, without written permission from the authors.
+
+Students: do not submit any part of this project as your own work. Doing so is a
+breach of academic integrity at AUT and at other institutions.
+
+The game art in src/expedition/ui/swing/assets and the sketches in Ideas/ were drawn
+by Nadia Meriouli and are covered by this notice.
+
+Third-party files keep their own licenses:
+- lib/derby.jar is Apache Derby, under the Apache License 2.0.
+- src/expedition/ui/swing/assets/pixelta-regular.ttf is the Pixelta font, under its
+  author's license.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
